@@ -131,7 +131,7 @@ For a standard batch dataset:
 **Where and how to modify options ?**  All options can be found at `config.py` (where to find data, which datasets to use, parameters for episodes etc..). The code uses `sacred` package to handle configurations. Options can be specified using `with ingredient_name.option_name=option_value`. For instance:
 
 ```python
-python3 example.py with data.batch_size=124 sources="['ilsvrc_2012', 'dtd']" path="your_path_to_data_folder"
+python3 example.py with data.batch_size=124 data.sources="['ilsvrc_2012', 'dtd']" data.path="your_path_to_data_folder"
 ```
 
 
