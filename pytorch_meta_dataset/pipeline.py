@@ -4,7 +4,7 @@ from . import sampling
 import torch
 from .transform import get_transforms
 import numpy as np
-from ..utils import cycle, Split
+from .utils import cycle, Split
 from typing import List, Union
 from .dataset_spec import HierarchicalDatasetSpecification as HDS
 from .dataset_spec import BiLevelDatasetSpecification as BDS
@@ -19,54 +19,27 @@ def make_episode_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
                           split: Split,
                           episode_descr_config: EpisodeDescriptionConfig,
                           data_config: DataConfig,
-                          num_prefetch: int = 0,
-                          num_to_take: Union[int, None] = None,
                           ignore_hierarchy_probability: int = 0.0,
                           **kwargs):
-    """Returns a pipeline emitting data from one single source as Episodes.
+    """Returns a pipeline emitting data from potentially multiples source as Episodes.
 
     Args:
-      dataset_spec: A DatasetSpecification object defining what to read from.
-      use_dag_ontology: Whether to use source's ontology in the form of a DAG to
-        sample episodes classes.
-      use_bilevel_ontology: Whether to use source's bilevel ontology (consisting
-        of superclasses and subclasses) to sample episode classes.
+      dataset_spec_list: A list of DatasetSpecification object defining what to read from.
       split: A learning_spec.Split object identifying the source (meta-)split.
       episode_descr_config: An instance of EpisodeDescriptionConfig containing
         parameters relating to sampling shots and ways for episodes.
-      pool: String (optional), for example-split datasets, which example split to
-        use ('train', 'valid', or 'test'), used at meta-test time only.
-      shuffle_buffer_size: int or None, shuffle buffer size for each Dataset.
-      read_buffer_size_bytes: int or None, buffer size for each TFRecordDataset.
-      num_prefetch: int, the number of examples to prefetch for each class of each
-        dataset. Prefetching occurs just after the class-specific Dataset object
-        is constructed. If < 1, no prefetching occurs.
-      image_size: int, desired image size used during decoding.
-      num_to_take: Optional, an int specifying a number of elements to pick from
-        each class' tfrecord. If specified, the available images of each class
-        will be restricted to that int. By default no restriction is applied and
-        all data is used.
       ignore_hierarchy_probability: Float, if using a hierarchy, this flag makes
         the sampler ignore the hierarchy for this proportion of episodes and
         instead sample categories uniformly.
-      simclr_episode_fraction: Float, fraction of episodes that will be converted
-        to SimCLR Episodes as described in the CrossTransformers paper.
-
 
     Returns:
-      A Dataset instance that outputs tuples of fully-assembled and decoded
-        episodes zipped with the ID of their data source of origin.
     """
-    num_unique_episodes = episode_descr_config.num_unique_episodes
 
     episodic_dataset_list = []
     for i in range(len(dataset_spec_list)):
         episode_reader = reader.Reader(dataset_spec=dataset_spec_list[i],
                                        split=split,
-                                       offset=0,
-                                       num_prefetch=num_prefetch,
-                                       num_to_take=num_to_take,
-                                       num_unique_episodes=num_unique_episodes)
+                                       offset=0)
         class_datasets = episode_reader.construct_class_datasets()
         sampler = sampling.EpisodeDescriptionSampler(
             dataset_spec=episode_reader.dataset_spec,
@@ -89,53 +62,21 @@ def make_episode_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
 def make_batch_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
                         data_config: DataConfig,
                         split: Split,
-                        num_prefetch: int = 0,
-                        num_to_take: Union[None, int] = None,
                         **kwargs):
-    """Returns a pipeline emitting data from one single source as Episodes.
+    """Returns a pipeline emitting data from potentially multiples source as batches.
 
     Args:
-      dataset_spec: A DatasetSpecification object defining what to read from.
-      use_dag_ontology: Whether to use source's ontology in the form of a DAG to
-        sample episodes classes.
-      use_bilevel_ontology: Whether to use source's bilevel ontology (consisting
-        of superclasses and subclasses) to sample episode classes.
+      dataset_spec_list: A list of DatasetSpecification object defining what to read from.
       split: A learning_spec.Split object identifying the source (meta-)split.
-      episode_descr_config: An instance of EpisodeDescriptionConfig containing
-        parameters relating to sampling shots and ways for episodes.
-      pool: String (optional), for example-split datasets, which example split to
-        use ('train', 'valid', or 'test'), used at meta-test time only.
-      shuffle_buffer_size: int or None, shuffle buffer size for each Dataset.
-      read_buffer_size_bytes: int or None, buffer size for each TFRecordDataset.
-      num_prefetch: int, the number of examples to prefetch for each class of each
-        dataset. Prefetching occurs just after the class-specific Dataset object
-        is constructed. If < 1, no prefetching occurs.
-      image_size: int, desired image size used during decoding.
-      num_to_take: Optional, an int specifying a number of elements to pick from
-        each class' tfrecord. If specified, the available images of each class
-        will be restricted to that int. By default no restriction is applied and
-        all data is used.
-      ignore_hierarchy_probability: Float, if using a hierarchy, this flag makes
-        the sampler ignore the hierarchy for this proportion of episodes and
-        instead sample categories uniformly.
-      simclr_episode_fraction: Float, fraction of episodes that will be converted
-        to SimCLR Episodes as described in the CrossTransformers paper.
-
-
     Returns:
-      A Dataset instance that outputs tuples of fully-assembled and decoded
-        episodes zipped with the ID of their data source of origin.
     """
-    if num_to_take is None:
-        num_to_take = -1
 
     offset = 0
     dataset_list = []
     for dataset_spec in dataset_spec_list:
         batch_reader = reader.Reader(dataset_spec=dataset_spec,
                                      split=split,
-                                     offset=offset,
-                                     num_prefetch=num_prefetch)
+                                     offset=offset)
 
         class_datasets = batch_reader.construct_class_datasets()
 

@@ -4,14 +4,25 @@ In this repo, I propose an implementation of the [meta-dataset](https://github.c
 
 ## Motivation
 
-Meta-Dataset is probably the most realistic few-shot classification benchmark in computer vision that exists up to this day. However, its official implementation heavily relies on TensorFlow. While authors do propose a fix to use their loaders in Pytorch by obtaining np.ndarray from their tf-based loader, I found it quite slow and memory consuming. Also, I prefer to have the data pipeline in a single framework (especially to handle options, transforms etc.). Therefore, I tried to reproduce the full pipeline in Pytorch. The main bottleneck was to read TFRecords, but I used this nice [open-source TFRecord reader](https://github.com/vahidk/tfrecord) to bypass the issue.
+Meta-Dataset is probably the most realistic few-shot classification benchmark in computer vision that exists up to this day. However, its official implementation heavily relies on TensorFlow. While authors do propose a fix to use their loaders in Pytorch by obtaining np.ndarray from their tf-based loader, I found it quite slow and memory consuming. Also, I prefer to have the data pipeline in a single framework (especially to handle options, transforms etc.). In order to read TFRecords, I used this nice [open-source TFRecord reader](https://github.com/vahidk/tfrecord) to bypass the issue. In summary, here are the pros and cons of this code
+
+Pros:
+
+* Full pytorch data pipeline => more efficient
+* Fully disentangled data pipeline from the rest => easy to embed in other code
+* Removed a lot of non-essential options => better understandability
+
+Cons:
+
+* Non official code
+* Removed a lot of non-essential options => for very advanced usages, requires modifs
 
 ## Overall structure
 
 I tried to keep as much as possible the structure and logic behind the original code. The parts that actually generate the episodes (sampling.py) were left almost untouched from the original code. Here is a rough overview of the pipeline:
 
 
-<img src="figures/overview.pdf" width="800" height="400"/>
+<img src="figures/overview.png" width="800"/>
 
 
 The general idea is that each `*.tfrecords` represents a class of a dataset. Therefore, we can create one TFRecordDataset per class. So for each dataset (e.g imagenet), we will have a list of all TFRecordDataset (one per class), which randomly sampled from.
@@ -37,9 +48,6 @@ Let us go together through the simple example provided in `example.py`.
 
 First, we need to recover the configurations from `src.config.py`
 ```python
-from src.datasets.config import dataset_ingredient
-import src.config as config_lib
-
 ex = sacred.Experiment('Model training',
                        ingredients=[dataset_ingredient])
 
@@ -82,8 +90,9 @@ Next, we need to get the dataset_specifications, which will recover more specifi
 Once the dataset_spec of each dataset has been recovered, we are ready to get the datasets. For an episodic dataset:
 ```python
     # Form an episodic dataset
+    split = Split["TRAIN"]
     episodic_dataset = pipeline.make_episode_pipeline(dataset_spec_list=all_dataset_specs,
-                                                      split=Split("TRAIN"),
+                                                      split=split,
                                                       data_config=data_config,
                                                       episode_descr_config=episod_config)
 
@@ -109,7 +118,7 @@ For a standard batch dataset:
 
     # Form a batch dataset
     batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
-                                                 split=Split("TRAIN"),
+                                                 split=split,
                                                  data_config=data_config)
 
     # Use a standard dataloader

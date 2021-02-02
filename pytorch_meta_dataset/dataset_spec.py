@@ -21,15 +21,15 @@ import json
 import os
 
 from absl import logging
-import data
+from typing import Union, List, Set, Any, Dict
 from . import imagenet_specification
-from ..utils import Split
+from .utils import Split
 import numpy as np
 import six
 from six.moves import cPickle as pkl
 
 
-def get_classes(split, classes_per_split):
+def get_classes(split: Split, classes_per_split: Dict[Split, int]):
     """Gets the sequence of class labels for a split.
 
     Class id's are returned ordered and without gaps.
@@ -63,7 +63,8 @@ def get_classes(split, classes_per_split):
 
 
 def _check_validity_of_restricted_classes_per_split(
-        restricted_classes_per_split, classes_per_split):
+            restricted_classes_per_split: Dict[Split, int],
+            classes_per_split: Dict[Split, int]):
     """Check the validity of the given restricted_classes_per_split.
 
     Args:
@@ -93,7 +94,7 @@ def _check_validity_of_restricted_classes_per_split(
                                      classes_per_split[split_enum]))
 
 
-def get_total_images_per_class(data_spec, class_id=None, pool=None):
+def get_total_images_per_class(data_spec, class_id: int = None):
     """Returns the total number of images of a class in a data_spec and pool.
 
     Args:
@@ -124,20 +125,12 @@ def get_total_images_per_class(data_spec, class_id=None, pool=None):
                            'in images_per_class.'.format(class_id))
     num_images = data_spec.images_per_class[class_id]
 
-    if pool is None:
-        if isinstance(num_images, collections.Mapping):
-            raise ValueError('DatasetSpecification {} has example-level splits, so '
-                             'the "pool" argument has to be set (to "train" or '
-                             '"test".'.format(data_spec.name))
-    elif not data.POOL_SUPPORTED:
-        raise NotImplementedError('Example-level splits or pools not supported.')
-
     return num_images
 
 
 class BenchmarkSpecification(
         collections.namedtuple(
-                'BenchmarkSpecification', 'name, image_shape, dataset_spec_list,'
+                'BenchmarkSpecification', 'name, dataset_spec_list,'
                 'has_dag_ontology, has_bilevel_ontology, splits_to_contribute')):
     """The specification of a benchmark, consisting of multiple datasets.
 
@@ -166,8 +159,12 @@ class BenchmarkSpecification(
                 particular split even if it has a non-zero number of classes for it.
     """
 
-    def __new__(cls, name, image_shape, dataset_spec_list, has_dag_ontology,
-                has_bilevel_ontology, splits_to_contribute):
+    def __new__(cls,
+                name: str,
+                dataset_spec_list,
+                has_dag_ontology: List[bool],
+                has_bilevel_ontology: List[bool],
+                splits_to_contribute: List[Set[str]]):
         if len(has_dag_ontology) != len(dataset_spec_list):
             raise ValueError('The length of has_dag_ontology must be the number of '
                              'datasets.')
@@ -216,7 +213,7 @@ class BenchmarkSpecification(
                 raise ValueError('A dataset can not contribute to a split if it has '
                                  'no classes assigned to that split.')
         self = super(BenchmarkSpecification, cls).__new__(
-                                    cls, name, image_shape, dataset_spec_list,
+                                    cls, name, dataset_spec_list,
                                     has_dag_ontology, has_bilevel_ontology,
                                     splits_to_contribute)
         return self
@@ -250,7 +247,8 @@ class DatasetSpecification(
                 examples of an episode.
     """
 
-    def initialize(self, restricted_classes_per_split=None):
+    def initialize(self,
+                   restricted_classes_per_split: Dict[Split, int] = None):
         """Initializes a DatasetSpecification.
 
         Args:
@@ -273,7 +271,8 @@ class DatasetSpecification(
             for split, restricted_num_classes in restricted_classes_per_split.items():
                 self.classes_per_split[split] = restricted_num_classes
 
-    def get_total_images_per_class(self, class_id=None, pool=None):
+    def get_total_images_per_class(self,
+                                   class_id: int = None):
         """Returns the total number of images for the specified class.
 
         Args:
@@ -291,9 +290,10 @@ class DatasetSpecification(
                 - incorrect value for pool.
             RuntimeError: the DatasetSpecification is out of date (missing info).
         """
-        return get_total_images_per_class(self, class_id, pool=pool)
+        return get_total_images_per_class(self, class_id)
 
-    def get_classes(self, split):
+    def get_classes(self,
+                    split: Split):
         """Gets the sequence of class labels for a split.
 
         Labels are returned ordered and without gaps.
@@ -309,7 +309,7 @@ class DatasetSpecification(
         """
         return get_classes(split, self.classes_per_split)
 
-    def to_dict(self):
+    def to_dict(self, ret_Dict):
         """Returns a dictionary for serialization to JSON.
 
         Each member is converted to an elementary type that can be serialized to
@@ -318,21 +318,21 @@ class DatasetSpecification(
         # Start with the dict representation of the namedtuple
         ret_dict = self._asdict()
         # Add the class name for reconstruction when deserialized
-        ret_dict['__class__'] = self.__class__.__name__
+        ret_Dict['__class__'] = self.__class__.__name__
         # Convert Split enum instances to their name (string)
-        ret_dict['classes_per_split'] = {
+        ret_Dict['classes_per_split'] = {
                 split.name: count
-                for split, count in six.iteritems(ret_dict['classes_per_split'])
+                for split, count in six.iteritems(ret_Dict['classes_per_split'])
         }
         # Convert binary class names to unicode strings if necessary
         class_names = {}
-        for class_id, name in six.iteritems(ret_dict['class_names']):
+        for class_id, name in six.iteritems(ret_Dict['class_names']):
             if isinstance(name, six.binary_type):
                 name = name.decode()
             elif isinstance(name, np.integer):
                 name = six.text_type(name)
             class_names[class_id] = name
-        ret_dict['class_names'] = class_names
+        ret_Dict['class_names'] = class_names
         return ret_dict
 
 
@@ -365,7 +365,8 @@ class BiLevelDatasetSpecification(
                 examples of an episode.
     """
 
-    def initialize(self, restricted_classes_per_split=None):
+    def initialize(self,
+                   restricted_classes_per_split: Union[Split, int] = None):
         """Initializes a DatasetSpecification.
 
         Args:
@@ -394,7 +395,8 @@ class BiLevelDatasetSpecification(
         # The restriction in this case is applied in get_classes() below.
         self.restricted_classes_per_split = restricted_classes_per_split
 
-    def get_total_images_per_class(self, class_id=None, pool=None):
+    def get_total_images_per_class(self,
+                                   class_id: int = None):
         """Returns the total number of images for the specified class.
 
         Args:
@@ -412,9 +414,9 @@ class BiLevelDatasetSpecification(
                 - incorrect value for pool.
             RuntimeError: the DatasetSpecification is out of date (missing info).
         """
-        return get_total_images_per_class(self, class_id, pool=pool)
+        return get_total_images_per_class(self, class_id)
 
-    def get_superclasses(self, split):
+    def get_superclasses(self, split: Split):
         """Gets the sequence of superclass labels for a split.
 
         Labels are returned ordered and without gaps.
@@ -430,13 +432,13 @@ class BiLevelDatasetSpecification(
         """
         return get_classes(split, self.superclasses_per_split)
 
-    def _count_classes_in_superclasses(self, superclass_ids):
+    def _count_classes_in_superclasses(self, superclass_ids: List[int]):
         return sum([
                 self.classes_per_superclass[superclass_id]
                 for superclass_id in superclass_ids
         ])
 
-    def _get_split_offset(self, split):
+    def _get_split_offset(self, split: Split):
         """Returns the starting class id of the contiguous chunk of ids of split.
 
         Args:
@@ -460,7 +462,7 @@ class BiLevelDatasetSpecification(
             raise ValueError('Invalid dataset split.')
         return offset
 
-    def get_classes(self, split):
+    def get_classes(self, split: Split):
         """Gets the sequence of class labels for a split.
 
         Labels are returned ordered and without gaps.
@@ -484,7 +486,10 @@ class BiLevelDatasetSpecification(
 
         return range(offset, offset + num_split_classes)
 
-    def get_class_ids_from_superclass_subclass_inds(self, split, superclass_id, class_inds):
+    def get_class_ids_from_superclass_subclass_inds(self,
+                                                    split: Split,
+                                                    superclass_id: int,
+                                                    class_inds: List[int]):
         """Gets the class ids of a number of classes of a given superclass.
 
         Args:
@@ -515,7 +520,7 @@ class BiLevelDatasetSpecification(
 
         return rel_class_ids, class_ids
 
-    def to_dict(self):
+    def to_dict(self, ret_Dict):
         """Returns a dictionary for serialization to JSON.
 
         Each member is converted to an elementary type that can be serialized to
@@ -524,11 +529,11 @@ class BiLevelDatasetSpecification(
         # Start with the dict representation of the namedtuple
         ret_dict = self._asdict()
         # Add the class name for reconstruction when deserialized
-        ret_dict['__class__'] = self.__class__.__name__
+        ret_Dict['__class__'] = self.__class__.__name__
         # Convert Split enum instances to their name (string)
-        ret_dict['superclasses_per_split'] = {
+        ret_Dict['superclasses_per_split'] = {
                 split.name: count
-                for split, count in six.iteritems(ret_dict['superclasses_per_split'])
+                for split, count in six.iteritems(ret_Dict['superclasses_per_split'])
         }
         return ret_dict
 
@@ -559,7 +564,7 @@ class HierarchicalDatasetSpecification(
 
     # TODO(etriantafillou): Make this class inherit from object instead
     # TODO(etriantafillou): Move this method to the __init__ of that revised class
-    def initialize(self, restricted_classes_per_split=None):
+    def initialize(self, restricted_classes_per_split: Dict[Split, int] = None):
         """Initializes a HierarchicalDatasetSpecification.
 
         Args:
@@ -598,7 +603,7 @@ class HierarchicalDatasetSpecification(
             classes_per_split[split] = count_split_classes(split)
         return classes_per_split
 
-    def get_split_subgraph(self, split):
+    def get_split_subgraph(self, split: Split):
         """Returns the sampling subgraph DAG for the given split.
 
         Args:
@@ -606,7 +611,7 @@ class HierarchicalDatasetSpecification(
         """
         return self.split_subgraphs[split]
 
-    def get_classes(self, split):
+    def get_classes(self, split: Split):
         """Returns a list of the class id's of classes assigned to split.
 
         Args:
@@ -626,7 +631,7 @@ class HierarchicalDatasetSpecification(
             examples, if the classes are balanced, or -1 to indicate class imbalance.
         """
 
-        def list_leaf_num_images(split):
+        def list_leaf_num_images(split: Split):
             return [
                     self.images_per_class[split][n] for n in
                     imagenet_specification.get_leaves(self.split_subgraphs[split])
@@ -686,7 +691,7 @@ class HierarchicalDatasetSpecification(
                     return self.images_per_class[s][n]
         raise ValueError('Class id {} not found.'.format(class_id))
 
-    def to_dict(self):
+    def to_dict(self, ret_Dict):
         """Returns a dictionary for serialization to JSON.
 
         Each member is converted to an elementary type that can be serialized to
@@ -695,26 +700,26 @@ class HierarchicalDatasetSpecification(
         # Start with the dict representation of the namedtuple
         ret_dict = self._asdict()
         # Add the class name for reconstruction when deserialized
-        ret_dict['__class__'] = self.__class__.__name__
+        ret_Dict['__class__'] = self.__class__.__name__
         # Convert the graph for each split into a serializable form
         split_subgraphs = {}
-        for split, subgraph in six.iteritems(ret_dict['split_subgraphs']):
+        for split, subgraph in six.iteritems(ret_Dict['split_subgraphs']):
             exported_subgraph = imagenet_specification.export_graph(subgraph)
             split_subgraphs[split.name] = exported_subgraph
-        ret_dict['split_subgraphs'] = split_subgraphs
+        ret_Dict['split_subgraphs'] = split_subgraphs
         # WordNet synsets to their WordNet ID as a string in images_per_class.
         images_per_class = {}
-        for split, synset_counts in six.iteritems(ret_dict['images_per_class']):
+        for split, synset_counts in six.iteritems(ret_Dict['images_per_class']):
             wn_id_counts = {
                     synset.wn_id: count for synset, count in six.iteritems(synset_counts)
             }
             images_per_class[split.name] = wn_id_counts
-        ret_dict['images_per_class'] = images_per_class
+        ret_Dict['images_per_class'] = images_per_class
 
         return ret_dict
 
 
-def as_dataset_spec(dct):
+def as_dataset_spec(dct: Dict[str, Any]):
     """Hook to `json.loads` that builds a DatasetSpecification from a dict.
 
     Args:
@@ -811,7 +816,7 @@ def as_dataset_spec(dct):
         return dct
 
 
-def load_dataset_spec(dataset_records_path, convert_from_pkl=False):
+def load_dataset_spec(dataset_records_path: str, convert_from_pkl: bool = False):
     """Loads dataset specification from directory containing the dataset records.
 
     Newly-generated datasets have the dataset specification serialized as JSON,

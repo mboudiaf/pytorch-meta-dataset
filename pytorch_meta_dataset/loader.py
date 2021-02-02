@@ -1,6 +1,6 @@
 from . import pipeline
 from torch.utils.data import DataLoader
-from ..utils import Split
+from .utils import Split
 from typing import List, Union
 from .dataset_spec import HierarchicalDatasetSpecification as HDS
 from .dataset_spec import BiLevelDatasetSpecification as BDS

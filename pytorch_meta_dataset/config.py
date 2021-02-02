@@ -14,7 +14,7 @@ def config():
     episodic = False  # noqa: F841
     path = 'data'  # noqa: F841
     split = 'train'  # noqa: F841
-    num_workers = 2  # noqa: F841
+    num_workers = 3  # noqa: F841
     train_transforms = ['random_resized_crop', 'jitter', 'random_flip', 'normalize']  # noqa: F841
     test_transforms = ['resize', 'center_crop', 'normalize']  # noqa: F841
 
@@ -32,7 +32,6 @@ def config():
     ignore_bilevel_ontology = False  # noqa: F841
     ignore_hierarchy_probability = 0  # noqa: F841
     min_examples_in_class = 0  # noqa: F841
-    num_unique_episodes = 0  # noqa: F841
 
 
 class DataConfig(object):
@@ -49,21 +48,6 @@ class DataConfig(object):
             test_transforms: List[str]
     ):
         """Initialize a DataConfig.
-
-        Args:
-            image_size: An integer, the desired height for the images output by the
-                data pipeline. Images are squared and have 3 channels (RGB), so each
-                image will have shape [image_size, image_size, 3],
-            shuffle_buffer_size: An integer, the size of the example buffer in the
-                tf.data.Dataset.shuffle operations (there is typically one shuffle per
-                class in the episodic setting, one per dataset in the batch setting).
-                Classes with fewer examples as this number are shuffled in-memory.
-            read_buffer_size_bytes: An integer, the size (in bytes) of the read buffer
-                for each tf.data.TFRecordDataset (there is typically one for each class
-                of each dataset).
-            num_prefetch: int, the number of examples to prefetch for each class of
-                each dataset. Prefetching occurs just after the class-specific Dataset
-                object is constructed. If < 1, no prefetching occurs.
         """
 
         # General info
@@ -95,8 +79,7 @@ class EpisodeDescriptionConfig(object):
                  ignore_dag_ontology: bool,
                  ignore_bilevel_ontology: bool,
                  ignore_hierarchy_probability: bool,
-                 min_examples_in_class: int,
-                 num_unique_episodes: int):
+                 min_examples_in_class: int):
         """Initialize a EpisodeDescriptionConfig.
 
         This is used in sampling.py in Trainer and in EpisodeDescriptionSampler to
@@ -143,13 +126,6 @@ class EpisodeDescriptionConfig(object):
                 no examples may trigger errors later. For variable shots, a value of 2
                 makes it sure that there are at least one support and one query samples.
                 For fixed shots, you could set it to `num_support + num_query`.
-            num_unique_episodes: An integer, the number of unique episodes to use.
-                If set to x > 0, x number of episodes are pre-generated, and repeatedly
-                iterated over. This is also helpful when running on TPUs as it avoids
-                the use of tf.data.Dataset.from_generator. If set to x = 0, no such
-                upper bound on number of unique episodes is set. Note that this is the
-                number of unique episodes _for each source dataset_, not total unique
-                episodes.
 
         Raises:
             RuntimeError: if incompatible arguments are passed.
@@ -195,7 +171,6 @@ class EpisodeDescriptionConfig(object):
         self.ignore_bilevel_ontology = ignore_bilevel_ontology
         self.ignore_hierarchy_probability = ignore_hierarchy_probability
         self.min_examples_in_class = min_examples_in_class
-        self.num_unique_episodes = num_unique_episodes
 
     @property
     def max_ways(self):

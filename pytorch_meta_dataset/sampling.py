@@ -1,8 +1,13 @@
 from absl import logging
+from typing import Union, List, Tuple
 import numpy as np
 from . import dataset_spec as dataset_spec_lib
-from. import imagenet_specification
-
+from . import imagenet_specification
+from . config import EpisodeDescriptionConfig
+from .dataset_spec import HierarchicalDatasetSpecification as HDS
+from .dataset_spec import BiLevelDatasetSpecification as BDS
+from .dataset_spec import DatasetSpecification as DS
+from .utils import Split
 
 # Module-level random number generator. Initialized randomly, can be seeded.
 RNG = np.random.RandomState(seed=None)
@@ -20,7 +25,9 @@ RNG = np.random.RandomState(seed=None)
 MAX_SPANNING_LEAVES_ELIGIBLE = 392
 
 
-def sample_num_ways_uniformly(num_classes, min_ways, max_ways):
+def sample_num_ways_uniformly(num_classes: int,
+                              min_ways: int,
+                              max_ways: int):
     """Samples a number of ways for an episode uniformly and at random.
 
     The support of the distribution is [min_ways, num_classes], or
@@ -38,7 +45,8 @@ def sample_num_ways_uniformly(num_classes, min_ways, max_ways):
     return RNG.randint(low=min_ways, high=max_ways + 1)
 
 
-def sample_class_ids_uniformly(num_ways, rel_classes):
+def sample_class_ids_uniformly(num_ways: int,
+                               rel_classes: List[int]):
     """Samples the (relative) class IDs for the episode.
 
     Args:
@@ -51,7 +59,9 @@ def sample_class_ids_uniformly(num_ways, rel_classes):
     return RNG.choice(rel_classes, num_ways, replace=False)
 
 
-def compute_num_query(images_per_class, max_num_query, num_support):
+def compute_num_query(images_per_class: np.ndarray,
+                      max_num_query: int,
+                      num_support: Union[int, Tuple[int, int]]):
     """Computes the number of query examples per class in the episode.
 
     Query sets are balanced, i.e., contain the same number of examples for each
@@ -87,9 +97,9 @@ def compute_num_query(images_per_class, max_num_query, num_support):
     return np.minimum(max_num_query, images_per_class.min() - max_support)
 
 
-def sample_support_set_size(num_remaining_per_class,
-                            max_support_size_contrib_per_class,
-                            max_support_set_size):
+def sample_support_set_size(num_remaining_per_class: np.ndarray,
+                            max_support_size_contrib_per_class: int,
+                            max_support_set_size: int):
     """Samples the size of the support set in the episode.
 
     That number is such that:
@@ -126,9 +136,11 @@ def sample_support_set_size(num_remaining_per_class,
         max_support_set_size)
 
 
-def sample_num_support_per_class(images_per_class, num_remaining_per_class,
-                                 support_set_size, min_log_weight,
-                                 max_log_weight):
+def sample_num_support_per_class(images_per_class: np.ndarray,
+                                 num_remaining_per_class: np.ndarray,
+                                 support_set_size: int,
+                                 min_log_weight: float,
+                                 max_log_weight: float):
     """Samples the number of support examples per class.
 
     At a high level, we wish the composition to loosely match class frequencies.
@@ -181,14 +193,13 @@ class EpisodeDescriptionSampler(object):
     """
 
     def __init__(self,  # noqa: E111
-                 dataset_spec,
-                 split,
-                 episode_descr_config,
-                 pool=None,
-                 use_dag_hierarchy=False,
-                 use_bilevel_hierarchy=False,
-                 use_all_classes=False,
-                 ignore_hierarchy_probability=0.0):
+                 dataset_spec: Union[HDS, BDS, DS],
+                 split: Split,
+                 episode_descr_config: EpisodeDescriptionConfig,
+                 use_dag_hierarchy: bool = False,
+                 use_bilevel_hierarchy: bool = False,
+                 use_all_classes: bool = False,
+                 ignore_hierarchy_probability: float = 0.0):
         """Initializes an EpisodeDescriptionSampler.episode_config.
 
         Args:
@@ -215,7 +226,6 @@ class EpisodeDescriptionSampler(object):
         """
         self.dataset_spec = dataset_spec
         self.split = split
-        self.pool = pool
         self.use_dag_hierarchy = use_dag_hierarchy
         self.use_bilevel_hierarchy = use_bilevel_hierarchy
         self.ignore_hierarchy_probability = ignore_hierarchy_probability
@@ -239,7 +249,7 @@ class EpisodeDescriptionSampler(object):
         # Store (class_id, n_examples) of skipped classes for logging.
         skipped_classes = []
         for class_id in self.class_set:
-            n_examples = dataset_spec.get_total_images_per_class(class_id, pool=pool)  # noqa: E111
+            n_examples = dataset_spec.get_total_images_per_class(class_id)  # noqa: E111
             if n_examples < self.min_examples_in_class:  # noqa: E111
                 skipped_classes.append((class_id, n_examples))
             else:  # noqa: E111
@@ -435,7 +445,7 @@ class EpisodeDescriptionSampler(object):
         class_ids = self.sample_class_ids()
         images_per_class = np.array([
             self.dataset_spec.get_total_images_per_class(
-                self.class_set[cid], pool=self.pool) for cid in class_ids
+                self.class_set[cid]) for cid in class_ids
         ])
 
         if self.num_query is not None:

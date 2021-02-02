@@ -1,12 +1,12 @@
 import torch
 import sacred
-from .utils import Split
-from src.datasets.config import dataset_ingredient
-import src.datasets.dataset_spec as dataset_spec_lib
-import src.datasets.config as config_lib
+from pytorch_meta_dataset.utils import Split
+import pytorch_meta_dataset.config as config_lib
+import pytorch_meta_dataset.dataset_spec as dataset_spec_lib
+from pytorch_meta_dataset.config import dataset_ingredient
 from torch.utils.data import DataLoader
 import os
-import pipeline
+import pytorch_meta_dataset.pipeline as pipeline
 
 ex = sacred.Experiment('Model training',
                        ingredients=[dataset_ingredient])
@@ -48,14 +48,15 @@ def main():
         all_dataset_specs.append(dataset_spec)
 
     # Form an episodic dataset
+    split = Split["TRAIN"]
     episodic_dataset = pipeline.make_episode_pipeline(dataset_spec_list=all_dataset_specs,
-                                                      split=Split("TRAIN"),
+                                                      split=split,
                                                       data_config=data_config,
                                                       episode_descr_config=episod_config)
 
     #  If you want to get the total number of classes (i.e from combined datasets)
-    num_classes = sum([len(d_spec.get_classes(split=Split["TRAIN"])) for d_spec in all_dataset_specs])
-    print(f"=> There are {num_classes} in the combined datasets")
+    num_classes = sum([len(d_spec.get_classes(split=split)) for d_spec in all_dataset_specs])
+    print(f"=> There are {num_classes} classes in the combined datasets")
 
     # Use a standard dataloader
     episodic_loader = DataLoader(dataset=episodic_dataset,
@@ -68,13 +69,15 @@ def main():
         query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
         # Do some operations
         print("=> Example of episode")
-        print(f"Number of ways: {support_labels.unique().size(0)} \
-                \t Support size: {support.size()} \
-                \t Query Size: {query.size()}")
+        print("Number of ways: {}   Support size: {}   Query Size: {} \n".format(
+                            support_labels.unique().size(0),
+                            list(support.size()),
+                            list(query.size())))
+        break
 
     # Form a batch dataset
     batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
-                                                 split=Split("TRAIN"),
+                                                 split=split,
                                                  data_config=data_config)
 
     # Use a standard dataloader
@@ -86,4 +89,5 @@ def main():
         input, target = input.to(device), target.long().to(device, non_blocking=True)
         # Do some operations
         print("=> Example of a batch")
-        print(f"Shape of batch: {input.size()}")
+        print(f"Shape of batch: {list(input.size())}")
+        break
