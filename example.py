@@ -82,7 +82,7 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
 
     # Define your device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

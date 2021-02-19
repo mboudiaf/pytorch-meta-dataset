@@ -48,97 +48,96 @@ Let us go together through the simple example provided in `example.py`.
 
 First, we need to recover the configurations from `src.config.py`
 ```python
-ex = sacred.Experiment('Model training',
-                       ingredients=[dataset_ingredient])
 
-@ex.automain
-def main():
-
-    # Recovering configurations
-    data_config = config_lib.DataConfig()
-    episod_config = config_lib.EpisodeDescriptionConfig()
+# Recovering configurations
+data_config = config_lib.DataConfig(args)
+episod_config = config_lib.EpisodeDescriptionConfig(args)
 ```
 
 Next, we need to get the dataset_specifications, which will recover more specific informations about each dataset contained in each dataset_spec.json. Before, we need to enforce some arguments similar to the original [tutorial](https://github.com/google-research/meta-dataset/blob/main/Intro_to_Metadataset.ipynb))
 ```python
-    datasets = data_config.sources
-    if episod_config.num_ways:
-        if len(datasets) > 1:
-            raise ValueError('For fixed episodes, not tested yet on > 1 dataset')
-        use_dag_ontology_list = [False]
-    else:
-        use_bilevel_ontology_list = [False]*len(datasets)
-        # Enable ontology aware sampling for Omniglot and ImageNet.
-        if 'omniglot' in datasets:
-            use_bilevel_ontology_list[datasets.index('omniglot')] = True
-        if 'imagenet' in datasets:
-            use_bilevel_ontology_list[datasets.index('imagenet')] = True
+datasets = data_config.sources
+if episod_config.num_ways:
+    if len(datasets) > 1:
+        raise ValueError('For fixed episodes, not tested yet on > 1 dataset')
+    use_dag_ontology_list = [False]
+else:
+    use_bilevel_ontology_list = [False]*len(datasets)
+    # Enable ontology aware sampling for Omniglot and ImageNet.
+    if 'omniglot' in datasets:
+        use_bilevel_ontology_list[datasets.index('omniglot')] = True
+    if 'imagenet' in datasets:
+        use_bilevel_ontology_list[datasets.index('imagenet')] = True
 
-        use_bilevel_ontology_list = use_bilevel_ontology_list
-        use_dag_ontology_list = [False]*len(datasets)
-    episod_config.use_bilevel_ontology_list = use_bilevel_ontology_list
-    episod_config.use_dag_ontology_list = use_dag_ontology_list
+    use_bilevel_ontology_list = use_bilevel_ontology_list
+    use_dag_ontology_list = [False]*len(datasets)
+episod_config.use_bilevel_ontology_list = use_bilevel_ontology_list
+episod_config.use_dag_ontology_list = use_dag_ontology_list
 
-    all_dataset_specs = []
-    for dataset_name in datasets:
-        dataset_records_path = os.path.join(data_config.path, dataset_name)
-        dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
-        all_dataset_specs.append(dataset_spec)
+all_dataset_specs = []
+for dataset_name in datasets:
+    dataset_records_path = os.path.join(data_config.path, dataset_name)
+    dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
+    all_dataset_specs.append(dataset_spec)
 
 ```
 
 Once the dataset_spec of each dataset has been recovered, we are ready to get the datasets. For an episodic dataset:
 ```python
-    # Form an episodic dataset
-    split = Split["TRAIN"]
-    episodic_dataset = pipeline.make_episode_pipeline(dataset_spec_list=all_dataset_specs,
-                                                      split=split,
-                                                      data_config=data_config,
-                                                      episode_descr_config=episod_config)
+# Form an episodic dataset
+split = Split["TRAIN"]
+episodic_dataset = pipeline.make_episode_pipeline(dataset_spec_list=all_dataset_specs,
+                                                  split=split,
+                                                  data_config=data_config,
+                                                  episode_descr_config=episod_config)
 
-    # Use a standard dataloader
-    episodic_loader = DataLoader(dataset=episodic_dataset,
-                                 batch_size=1,
-                                 num_workers=data_config.num_workers)
+# Use a standard dataloader
+episodic_loader = DataLoader(dataset=episodic_dataset,
+                             batch_size=1,
+                             num_workers=data_config.num_workers)
 
-    # Training or validation loop
-    for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
-        support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
-        query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
-        # Do some operations
+# Training or validation loop
+for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
+    support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
+    query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
+    # Do some operations
 ```
 For a standard batch dataset:
 
 ```python
-    # Training or validation loop
-    for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
-        support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
-        query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
-        # Do some operations
+# Training or validation loop
+for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
+    support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
+    query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
+    # Do some operations
 
-    # Form a batch dataset
-    batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
-                                                 split=split,
-                                                 data_config=data_config)
+# Form a batch dataset
+batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
+                                             split=split,
+                                             data_config=data_config)
 
-    # Use a standard dataloader
-    batch_loader = DataLoader(dataset=batch_dataset,
-                              batch_size=data_config.batch_size,
-                              num_workers=data_config.num_workers)
+# Use a standard dataloader
+batch_loader = DataLoader(dataset=batch_dataset,
+                          batch_size=data_config.batch_size,
+                          num_workers=data_config.num_workers)
 ```
 
 
-**Where and how to modify options ?**  All options can be found at `config.py` (where to find data, which datasets to use, parameters for episodes etc..). The code uses `sacred` package to handle configurations. Options can be specified using `with ingredient_name.option_name=option_value`. For instance:
+**Where and how to modify options ?**  All necessary options can be found in the `parse_args()` function. To see all available options:
+```
+python3 example.py --help
+```
 
+For instance, if you want the combination of 'dtd' and 'vgg_flower' dataset:
 ```python
-python3 example.py with data.batch_size=124 data.sources="['ilsvrc_2012', 'dtd']" data.path="your_path_to_data_folder"
+python3 example.py with --batch_size 124 --sources 'ilsvrc_2012' 'dtd' --data_path 'path_to_converted_folder'
 ```
 
 
 
 ## Contributions
 
-This repo was started to make it easy for Pytorch programmers to integrate meta-dataset into their framework. Please feel free to make pull requests to improve it ! If you have any question or remark, please file an issue or reach out to malik.boudiaf.1@etsmtl.net :-)
+This repo was started to make it easy for Pytorch users to integrate meta-dataset into their framework. Please feel free to make pull requests to improve it ! If you have any question or remark, please file an issue or reach out to malik.boudiaf.1@etsmtl.net :-)
 
 ## Acknowledgments
 
