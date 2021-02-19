@@ -46,7 +46,8 @@ My current setup can be found in `requirements.txt`. Note that the code should w
 
 Let us go together through the simple example provided in `example.py`.
 
-First, we need to recover the configurations from `src.config.py`
+First, we define two configurations objects (data_config for general info, and episode_config, well, for episodes):
+
 ```python
 
 # Recovering configurations
@@ -79,7 +80,6 @@ for dataset_name in datasets:
     dataset_records_path = os.path.join(data_config.path, dataset_name)
     dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
     all_dataset_specs.append(dataset_spec)
-
 ```
 
 Once the dataset_spec of each dataset has been recovered, we are ready to get the datasets. For an episodic dataset:
