@@ -102,8 +102,8 @@ def main(args: argparse.Namespace) -> None:
         # Enable ontology aware sampling for Omniglot and ImageNet.
         if 'omniglot' in datasets:
             use_bilevel_ontology_list[datasets.index('omniglot')] = True
-        if 'imagenet' in datasets:
-            use_bilevel_ontology_list[datasets.index('imagenet')] = True
+        if 'ilsvrc_2012' in datasets:
+            use_bilevel_ontology_list[datasets.index('ilsvrc_2012')] = True
 
         use_bilevel_ontology_list = use_bilevel_ontology_list
         use_dag_ontology_list = [False]*len(datasets)

@@ -2,8 +2,13 @@ import torchvision.transforms as transforms
 from .utils import Split
 from .config import DataConfig
 
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+# Usual ImageNet normalization
+# normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+#                                  std=[0.229, 0.224, 0.225])
+
+# The one used in the source code https://github.com/mboudiaf/pytorch-meta-dataset/issues/2
+normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                 std=[0.5, 0.5, 0.5])
 
 
 def get_transforms(data_config: DataConfig,
