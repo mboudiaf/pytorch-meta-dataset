@@ -93,20 +93,18 @@ def main(args: argparse.Namespace) -> None:
 
     # Get the data specifications
     datasets = data_config.sources
+    use_dag_ontology_list = [False]*len(datasets)
+    use_bilevel_ontology_list = [False]*len(datasets)
     if episod_config.num_ways:
         if len(datasets) > 1:
             raise ValueError('For fixed episodes, not tested yet on > 1 dataset')
-        use_dag_ontology_list = [False]
     else:
-        use_bilevel_ontology_list = [False]*len(datasets)
         # Enable ontology aware sampling for Omniglot and ImageNet.
         if 'omniglot' in datasets:
             use_bilevel_ontology_list[datasets.index('omniglot')] = True
         if 'ilsvrc_2012' in datasets:
-            use_bilevel_ontology_list[datasets.index('ilsvrc_2012')] = True
+            use_dag_ontology_list[datasets.index('ilsvrc_2012')] = True
 
-        use_bilevel_ontology_list = use_bilevel_ontology_list
-        use_dag_ontology_list = [False]*len(datasets)
     episod_config.use_bilevel_ontology_list = use_bilevel_ontology_list
     episod_config.use_dag_ontology_list = use_dag_ontology_list
 
