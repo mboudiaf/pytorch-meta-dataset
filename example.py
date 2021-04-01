@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import os
 import argparse
 import pytorch_meta_dataset.pipeline as pipeline
+from pytorch_meta_dataset.utils import worker_init_fn_
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,6 +31,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--batch_size', type=int, default=16)
 
     parser.add_argument('--num_workers', type=int, default=4)
+
+    parser.add_argument('--shuffle_queue_size', type=int, default=10,
+                        help='Number of samples loaded into memory and shuffled')
 
     # Episode configuration
     parser.add_argument('--num_ways', type=int, default=None,
@@ -128,7 +132,8 @@ def main(args: argparse.Namespace) -> None:
     # Use a standard dataloader
     episodic_loader = DataLoader(dataset=episodic_dataset,
                                  batch_size=1,
-                                 num_workers=data_config.num_workers)
+                                 num_workers=data_config.num_workers,
+                                 worker_init_fn=worker_init_fn_)
 
     # Training or validation loop
     for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
@@ -140,17 +145,20 @@ def main(args: argparse.Namespace) -> None:
                             support_labels.unique().size(0),
                             list(support.size()),
                             list(query.size())))
+        print(support_labels)
         break
 
     # Form a batch dataset
     batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
                                                  split=split,
-                                                 data_config=data_config)
+                                                 data_config=data_config,
+                                                 )
 
     # Use a standard dataloader
     batch_loader = DataLoader(dataset=batch_dataset,
                               batch_size=data_config.batch_size,
-                              num_workers=data_config.num_workers)
+                              num_workers=data_config.num_workers,
+                              worker_init_fn=worker_init_fn_)
     # Training or validation loop
     for i, (input, target) in enumerate(batch_loader):
         input, target = input.to(device), target.long().to(device, non_blocking=True)

@@ -309,31 +309,31 @@ class DatasetSpecification(
         """
         return get_classes(split, self.classes_per_split)
 
-    def to_dict(self, ret_Dict):
+    def to_dict(self):
         """Returns a dictionary for serialization to JSON.
 
         Each member is converted to an elementary type that can be serialized to
         JSON readily.
         """
         # Start with the dict representation of the namedtuple
-        ret_dict = self._asdict()
+        red_dict = self._asdict()
         # Add the class name for reconstruction when deserialized
-        ret_Dict['__class__'] = self.__class__.__name__
+        red_dict['__class__'] = self.__class__.__name__
         # Convert Split enum instances to their name (string)
-        ret_Dict['classes_per_split'] = {
+        red_dict['classes_per_split'] = {
                 split.name: count
-                for split, count in six.iteritems(ret_Dict['classes_per_split'])
+                for split, count in six.iteritems(red_dict['classes_per_split'])
         }
         # Convert binary class names to unicode strings if necessary
         class_names = {}
-        for class_id, name in six.iteritems(ret_Dict['class_names']):
+        for class_id, name in six.iteritems(red_dict['class_names']):
             if isinstance(name, six.binary_type):
                 name = name.decode()
             elif isinstance(name, np.integer):
                 name = six.text_type(name)
             class_names[class_id] = name
-        ret_Dict['class_names'] = class_names
-        return ret_dict
+        red_dict['class_names'] = class_names
+        return red_dict
 
 
 class BiLevelDatasetSpecification(
@@ -520,22 +520,22 @@ class BiLevelDatasetSpecification(
 
         return rel_class_ids, class_ids
 
-    def to_dict(self, ret_Dict):
+    def to_dict(self, red_dict):
         """Returns a dictionary for serialization to JSON.
 
         Each member is converted to an elementary type that can be serialized to
         JSON readily.
         """
         # Start with the dict representation of the namedtuple
-        ret_dict = self._asdict()
+        red_dict = self._asdict()
         # Add the class name for reconstruction when deserialized
-        ret_Dict['__class__'] = self.__class__.__name__
+        red_dict['__class__'] = self.__class__.__name__
         # Convert Split enum instances to their name (string)
-        ret_Dict['superclasses_per_split'] = {
+        red_dict['superclasses_per_split'] = {
                 split.name: count
-                for split, count in six.iteritems(ret_Dict['superclasses_per_split'])
+                for split, count in six.iteritems(red_dict['superclasses_per_split'])
         }
-        return ret_dict
+        return red_dict
 
 
 class HierarchicalDatasetSpecification(
@@ -691,32 +691,32 @@ class HierarchicalDatasetSpecification(
                     return self.images_per_class[s][n]
         raise ValueError('Class id {} not found.'.format(class_id))
 
-    def to_dict(self, ret_Dict):
+    def to_dict(self, red_dict):
         """Returns a dictionary for serialization to JSON.
 
         Each member is converted to an elementary type that can be serialized to
         JSON readily.
         """
         # Start with the dict representation of the namedtuple
-        ret_dict = self._asdict()
+        red_dict = self._asdict()
         # Add the class name for reconstruction when deserialized
-        ret_Dict['__class__'] = self.__class__.__name__
+        red_dict['__class__'] = self.__class__.__name__
         # Convert the graph for each split into a serializable form
         split_subgraphs = {}
-        for split, subgraph in six.iteritems(ret_Dict['split_subgraphs']):
+        for split, subgraph in six.iteritems(red_dict['split_subgraphs']):
             exported_subgraph = imagenet_specification.export_graph(subgraph)
             split_subgraphs[split.name] = exported_subgraph
-        ret_Dict['split_subgraphs'] = split_subgraphs
+        red_dict['split_subgraphs'] = split_subgraphs
         # WordNet synsets to their WordNet ID as a string in images_per_class.
         images_per_class = {}
-        for split, synset_counts in six.iteritems(ret_Dict['images_per_class']):
+        for split, synset_counts in six.iteritems(red_dict['images_per_class']):
             wn_id_counts = {
                     synset.wn_id: count for synset, count in six.iteritems(synset_counts)
             }
             images_per_class[split.name] = wn_id_counts
-        ret_Dict['images_per_class'] = images_per_class
+        red_dict['images_per_class'] = images_per_class
 
-        return ret_dict
+        return red_dict
 
 
 def as_dataset_spec(dct: Dict[str, Any]):
