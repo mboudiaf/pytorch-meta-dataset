@@ -39,6 +39,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--shuffle_queue_size', type=int, default=10,
                         help='Number of samples loaded into memory and shuffled')
 
+    parser.add_argument('--seed', type=int, default=2020,
+                    help='Seed for reproducibility')
+
     # Episode configuration
     parser.add_argument('--num_ways', type=int, default=None,
                         help='Set it if you want a fixed # of ways per task')
@@ -58,13 +61,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--max_num_query', type=int, default=10,
                         help='Maximum # of query samples')
 
-    parser.add_argument('--max_support_set_size', type=int, default=100,
+    parser.add_argument('--max_support_set_size', type=int, default=500,
                         help='Maximum # of support samples')
 
     parser.add_argument('--min_examples_in_class', type=int, default=0,
                         help='Classes that have less samples will be skipped')
 
-    parser.add_argument('--max_support_size_contrib_per_class', type=int, default=10,
+    parser.add_argument('--max_support_size_contrib_per_class', type=int, default=100,
                         help='Maximum # of support samples per class')
 
     parser.add_argument('--min_log_weight', type=float, default=-0.69314718055994529,
@@ -86,8 +89,6 @@ def parse_args() -> argparse.Namespace:
                         help='if using a hierarchy, this flag makes the sampler \
                               ignore the hierarchy for this proportion of episodes \
                               and instead sample categories uniformly.')
-    parser.add_argument('--seed', type=int, default=2020,
-                        help='Seed for reproducibility')
     args = parser.parse_args()
     return args
 
