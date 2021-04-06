@@ -338,6 +338,7 @@ class EpisodeDescriptionSampler(object):
             # Extract the sets of leaves and internal nodes in the DAG.
             leaves = set(imagenet_specification.get_leaves(graph))  # noqa: E111
             internal_nodes = graph - leaves  # set difference  # noqa: E111
+            # print(internal_nodes)
 
             # Map each node of the DAG to the Synsets of the leaves it spans.
             spanning_leaves_dict = imagenet_specification.get_spanning_leaves(graph)  # noqa: E111
@@ -350,7 +351,7 @@ class EpisodeDescriptionSampler(object):
                 # Build a list of relative class IDs of leaves that have at least
                 # min_examples_in_class examples.
                 ids_rel = []
-                for leaf in node_leaves:
+                for i, leaf in enumerate(node_leaves):
                     abs_id = dataset_spec.class_names_to_ids[leaf.wn_id]  # noqa: E111
                     if abs_id in self._filtered_class_set:  # noqa: E111
                         ids_rel.append(abs_to_rel_ids[abs_id])
@@ -366,6 +367,7 @@ class EpisodeDescriptionSampler(object):
                                  'episodes. Consider changing the value of '
                                  '`EpisodeDescriptionSampler.min_ways` in gin, or '
                                  'or MAX_SPANNING_LEAVES_ELIGIBLE in data.py.')
+            self.span_leaves_rel.sort(key=lambda l: sum(l))
 
     def sample_class_ids(self,
                          random_gen: RandomState):
@@ -386,6 +388,7 @@ class EpisodeDescriptionSampler(object):
         if self.use_dag_hierarchy and random_gen.choice([True, False], p=prob):
             # Retrieve the list of relative class IDs for an internal node sampled
             # uniformly at random.
+            # print(self.span_leaves_rel[:10])
             episode_classes_rel = random_gen.choice(self.span_leaves_rel)  # noqa: E111
             # print(torch.utils.data.get_worker_info(), episode_classes_rel)
             # If the number of chosen classes is larger than desired, sub-sample them.

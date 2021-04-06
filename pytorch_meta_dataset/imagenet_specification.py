@@ -906,7 +906,7 @@ def create_imagenet_specification(split_enum,
                                   files_to_skip,
                                   path_to_num_leaf_images=None,
                                   train_split_only=False,
-                                  log_stats=True):
+                                  log_stats=False):
     """Creates the dataset specification of ImageNet.
 
     This amounts to creating a data structure, a DAG specifically, whose nodes are

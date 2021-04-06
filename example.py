@@ -5,8 +5,12 @@ import pytorch_meta_dataset.dataset_spec as dataset_spec_lib
 from torch.utils.data import DataLoader
 import os
 import argparse
+import torch.backends.cudnn as cudnn
+import random
+import numpy as np
 import pytorch_meta_dataset.pipeline as pipeline
 from pytorch_meta_dataset.utils import worker_init_fn_
+from functools import partial
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,6 +86,8 @@ def parse_args() -> argparse.Namespace:
                         help='if using a hierarchy, this flag makes the sampler \
                               ignore the hierarchy for this proportion of episodes \
                               and instead sample categories uniformly.')
+    parser.add_argument('--seed', type=int, default=2020,
+                        help='Seed for reproducibility')
     args = parser.parse_args()
     return args
 
@@ -90,6 +96,13 @@ def main(args: argparse.Namespace) -> None:
 
     # Define your device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Seed
+    if args.seed is not None:
+        random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        cudnn.deterministic = True
+        np.random.seed(args.seed)
 
     # Recovering configurations
     data_config = config_lib.DataConfig(args)
@@ -130,23 +143,24 @@ def main(args: argparse.Namespace) -> None:
     print(f"=> There are {num_classes} classes in the combined datasets")
 
     # Use a standard dataloader
+    seeded_worker_fn = partial(worker_init_fn_, seed=args.seed)
     episodic_loader = DataLoader(dataset=episodic_dataset,
                                  batch_size=1,
                                  num_workers=data_config.num_workers,
-                                 worker_init_fn=worker_init_fn_)
+                                 worker_init_fn=seeded_worker_fn)
 
     # Training or validation loop
     for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
-        support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
-        query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
+        # support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
+        # query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
         # Do some operations
         print("=> Example of episode")
         print("Number of ways: {}   Support size: {}   Query Size: {} \n".format(
                             support_labels.unique().size(0),
                             list(support.size()),
                             list(query.size())))
-        print(support_labels)
-        break
+        if i == 5:
+            break
 
     # Form a batch dataset
     batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
@@ -158,14 +172,15 @@ def main(args: argparse.Namespace) -> None:
     batch_loader = DataLoader(dataset=batch_dataset,
                               batch_size=data_config.batch_size,
                               num_workers=data_config.num_workers,
-                              worker_init_fn=worker_init_fn_)
+                              worker_init_fn=seeded_worker_fn)
     # Training or validation loop
     for i, (input, target) in enumerate(batch_loader):
-        input, target = input.to(device), target.long().to(device, non_blocking=True)
+        # input, target = input.to(device), target.long().to(device, non_blocking=True)
         # Do some operations
         print("=> Example of a batch")
         print(f"Shape of batch: {list(input.size())}")
-        break
+        if i == 5:
+            break
 
 
 if __name__ == '__main__':

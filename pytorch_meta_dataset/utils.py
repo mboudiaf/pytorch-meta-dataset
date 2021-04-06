@@ -3,10 +3,10 @@ import torch
 import numpy as np
 
 
-def worker_init_fn_(worker_id):
+def worker_init_fn_(worker_id, seed):
     worker_info = torch.utils.data.get_worker_info()
     dataset = worker_info.dataset  # the dataset copy in this worker process
-    random_gen = np.random.RandomState()
+    random_gen = np.random.RandomState(seed + worker_id)
     dataset.random_gen = random_gen
     for d in dataset.dataset_list:
         d.random_gen = random_gen
