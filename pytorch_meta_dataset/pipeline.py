@@ -103,7 +103,7 @@ class EpisodicDataset(torch.utils.data.IterableDataset):
         self.transforms = transforms
         self.max_query_size = max_query_size
         self.max_support_size = max_support_size
-        self.random_gen = None
+        self.random_gen = np.random.RandomState()
 
     def __iter__(self):
         while True:
@@ -154,6 +154,7 @@ class BatchDataset(torch.utils.data.IterableDataset):
         super(BatchDataset).__init__()
         self.class_datasets = class_datasets
         self.transforms = transforms
+        self.random_gen = np.random.RandomState()
 
     def __iter__(self):
         while True:
@@ -176,7 +177,7 @@ class ZipDataset(torch.utils.data.IterableDataset):
     def __init__(self,
                  dataset_list: List[EpisodicDataset]):
         self.dataset_list = dataset_list
-        self.random_gen = None
+        self.random_gen = np.random.RandomState()
 
     def __iter__(self):
         while True:

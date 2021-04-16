@@ -13,6 +13,7 @@ from . import iterator_utils
 
 
 def tfrecord_iterator(data_path: str,
+                      random_gen: np.random.RandomState,
                       index_path: typing.Optional[str] = None,
                       shard: typing.Optional[typing.Tuple[int, int]] = None,
                       shuffle: bool = False,
@@ -48,8 +49,9 @@ def tfrecord_iterator(data_path: str,
     crc_bytes = bytearray(4)
     datum_bytes = bytearray(1024 * 1024)
 
-    def random_reader(indexes):
-        random_permutation = np.random.permutation(range(indexes.shape[0]))
+    def random_reader(indexes: np.ndarray,
+                      random_gen: np.random.RandomState,):
+        random_permutation = random_gen.permutation(range(indexes.shape[0]))
         for i in random_permutation:
             start = indexes[i, 0]
             end = indexes[i, 0] + indexes[i, 1]
@@ -83,7 +85,7 @@ def tfrecord_iterator(data_path: str,
         indexes = np.loadtxt(index_path, dtype=np.int64)
         # if shard is None:
         if shuffle:
-            yield from random_reader(indexes)
+            yield from random_reader(indexes=indexes, random_gen=random_gen)
         else:
             yield from read_records()
         # else:
@@ -165,6 +167,7 @@ def extract_feature_dict(features, description, typename_mapping):
 
 
 def example_loader(data_path: str,
+                   random_gen: np.random.RandomState,
                    index_path: typing.Union[str, None],
                    description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
                    shard: typing.Optional[typing.Tuple[int, int]] = None,
@@ -210,7 +213,7 @@ def example_loader(data_path: str,
         "int": "int64_list"
     }
 
-    record_iterator = tfrecord_iterator(data_path, index_path, shard, shuffle)
+    record_iterator = tfrecord_iterator(data_path, random_gen, index_path, shard, shuffle)
 
     for record, (start, end) in record_iterator:
         # yield record
@@ -291,6 +294,7 @@ def sequence_loader(data_path: str,
 
 def tfrecord_loader(data_path: str,
                     index_path: typing.Union[str, None],
+                    random_gen: np.random.RandomState,
                     description: typing.Union[typing.List[str], typing.Dict[str, str], None] = None,
                     shard: typing.Optional[typing.Tuple[int, int]] = None,
                     shuffle: bool = False,
@@ -343,7 +347,7 @@ def tfrecord_loader(data_path: str,
     """
     if sequence_description is not None:
         return sequence_loader(data_path, index_path, description, sequence_description, shard)
-    return example_loader(data_path, index_path, description, shard, shuffle)
+    return example_loader(data_path, random_gen, index_path, description, shard, shuffle)
 
 
 def multi_tfrecord_loader(data_pattern: str,

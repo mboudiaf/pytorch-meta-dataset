@@ -8,8 +8,10 @@ def worker_init_fn_(worker_id, seed):
     dataset = worker_info.dataset  # the dataset copy in this worker process
     random_gen = np.random.RandomState(seed + worker_id)
     dataset.random_gen = random_gen
-    for d in dataset.dataset_list:
-        d.random_gen = random_gen
+    for source_dataset in dataset.dataset_list:
+        source_dataset.random_gen = random_gen
+        for class_dataset in source_dataset.class_datasets:
+            class_dataset.random_gen = random_gen
 
 
 def cycle_(iterable):

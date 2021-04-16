@@ -65,6 +65,7 @@ class TFRecordDataset(torch.utils.data.IterableDataset):
         self.sequence_description = sequence_description
         self.shuffle = shuffle
         self.transform = transform
+        self.random_gen = np.random.RandomState()
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -78,7 +79,8 @@ class TFRecordDataset(torch.utils.data.IterableDataset):
                                     description=self.description,
                                     shard=shard,
                                     shuffle=self.shuffle,
-                                    sequence_description=self.sequence_description)
+                                    sequence_description=self.sequence_description,
+                                    random_gen=self.random_gen)
         if self.transform:
             it = map(self.transform, it)
         return it
