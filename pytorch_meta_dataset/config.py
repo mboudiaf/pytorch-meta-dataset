@@ -15,7 +15,7 @@ class DataConfig(object):
         self.path = args.data_path
         self.batch_size = args.batch_size
         self.num_workers = args.num_workers
-        self.shuffle_queue_size = args.shuffle_queue_size
+        self.shuffle = args.shuffle
 
         # Transforms and augmentations
         self.image_size = args.image_size

@@ -36,11 +36,11 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument('--num_workers', type=int, default=4)
 
-    parser.add_argument('--shuffle_queue_size', type=int, default=10,
-                        help='Number of samples loaded into memory and shuffled')
+    parser.add_argument('--shuffle', type=bool, default=True,
+                        help='Whether or not to shuffle data')
 
     parser.add_argument('--seed', type=int, default=2020,
-                    help='Seed for reproducibility')
+                        help='Seed for reproducibility')
 
     # Episode configuration
     parser.add_argument('--num_ways', type=int, default=None,

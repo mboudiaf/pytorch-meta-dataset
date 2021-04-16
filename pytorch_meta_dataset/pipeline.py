@@ -10,7 +10,7 @@ from .dataset_spec import HierarchicalDatasetSpecification as HDS
 from .dataset_spec import BiLevelDatasetSpecification as BDS
 from .dataset_spec import DatasetSpecification as DS
 from .config import EpisodeDescriptionConfig, DataConfig
-from tfrecord.torch.dataset import TFRecordDataset
+from .tfrecord.torch.dataset import TFRecordDataset
 from .sampling import EpisodeDescriptionSampler
 
 
@@ -38,7 +38,7 @@ def make_episode_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
     for i in range(len(dataset_spec_list)):
         episode_reader = reader.Reader(dataset_spec=dataset_spec_list[i],
                                        split=split,
-                                       shuffle_queue_size=data_config.shuffle_queue_size,
+                                       shuffle=data_config.shuffle,
                                        offset=0)
         class_datasets = episode_reader.construct_class_datasets()
         sampler = sampling.EpisodeDescriptionSampler(
@@ -76,7 +76,7 @@ def make_batch_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
     for dataset_spec in dataset_spec_list:
         batch_reader = reader.Reader(dataset_spec=dataset_spec,
                                      split=split,
-                                     shuffle_queue_size=data_config.shuffle_queue_size,
+                                     shuffle=data_config.shuffle,
                                      offset=offset)
 
         class_datasets = batch_reader.construct_class_datasets()
@@ -114,12 +114,22 @@ class EpisodicDataset(torch.utils.data.IterableDataset):
             query_labels = []
             episode_classes = list({class_ for class_, _, _ in episode_description})
             for class_id, nb_support, nb_query in episode_description:
-                for _ in range(nb_support):
+                used_ids = []
+                sup_added = 0
+                query_added = 0
+                while sup_added < nb_support:
                     sample_dic = self.get_next(class_id)
-                    support_images.append(self.transforms(sample_dic['image']).unsqueeze(0))
-                for _ in range(nb_query):
+                    if sample_dic['id'] not in used_ids:
+                        used_ids.append(sample_dic['id'])
+                        support_images.append(self.transforms(sample_dic['image']).unsqueeze(0))
+                        sup_added += 1
+                while query_added < nb_query:
                     sample_dic = self.get_next(class_id)
-                    query_images.append(self.transforms(sample_dic['image']).unsqueeze(0))
+                    if sample_dic['id'] not in used_ids:
+                        used_ids.append(sample_dic['id'])
+                        query_images.append(self.transforms(sample_dic['image']).unsqueeze(0))
+                        query_added += 1
+                # print(f"Class {class_id} contains duplicate: {contains_duplicates(used_ids)}")
                 support_labels.extend([episode_classes.index(class_id)] * nb_support)
                 query_labels.extend([episode_classes.index(class_id)] * nb_query)
             support_images = torch.cat(support_images, 0)
