@@ -1,0 +1,7 @@
+METHOD:
+  method: 'BDCSPN'
+  episodic_training: False
+  temp: 10
+  iter: 2
+  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'temp']
+  eval_metrics: ['Acc']

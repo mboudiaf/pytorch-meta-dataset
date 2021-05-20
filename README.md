@@ -1,144 +1,138 @@
-# Meta-dataset with pytorch
-
-In this repo, I propose an implementation of the [meta-dataset](https://github.com/google-research/meta-dataset) data pipeline in full pytorch.
-
-## Motivation
-
-Meta-Dataset is probably the most realistic few-shot classification benchmark in computer vision that exists up to this day. However, its official implementation heavily relies on TensorFlow. While authors do propose a fix to use their loaders in Pytorch by obtaining np.ndarray from their tf-based loader, I found it quite slow and memory consuming. Also, I prefer to have the data pipeline in a single framework (especially to handle options, transforms etc.). In order to read TFRecords, I used this nice [open-source TFRecord reader](https://github.com/vahidk/tfrecord) to bypass the issue. In summary, here are the pros and cons of this code
-
-Pros:
-
-* Full pytorch data pipeline => more efficient
-* Fully disentangled data pipeline from the rest => easy to embed in other code
-* Removed a lot of non-essential options => better understandability
-
-Cons:
-
-* Non official code
-* Removed a lot of non-essential options => for very advanced usages, requires modifs
-
-## Overall structure
-
-I tried to keep as much as possible the structure and logic behind the original code. The parts that actually generate the episodes (sampling.py) were left almost untouched from the original code. Here is a rough overview of the pipeline:
+# PyTorch META-DATASET
 
 
-<img src="figures/overview.png" width="800"/>
+##  Overview
+This repo contains a PyTorch implementation of [meta-dataset](https://github.com/google-research/meta-dataset) and a unified implementation of some few-shot methods. This repo may be useful to you if you:
+
+- Want some pre-trained ImageNet models in PyTorch for META-DATASET
+- Want to benchmark your method on META-DATASET (but do not want to mix your PyTorch code with the original TensorFlow implementation)
+- Are looking for a codebase to visualize few-shot episodes
+
+Additional benefits:
+
+1. Contrary to original TF code, this repo can be properly seeded, allowing to repeat the same random series of episodes if needed
+2. Contrary to the original repo, this code shuffles data without the need to use a buffer, hence reducing the memory consumption
+3. Better results can be obtained using this repo thanks to an enhanced way of resizing images. More details in the paper.
+
+Note that **this code also includes the original implementation** for comparison (using the PyTorch workaround proposed by the authors). If you wish to use the original implementation, set the option `loader_version: 'tf'` in base.yaml (by default set to `pytorch`).
+
+## 1. Setting up
+
+Please carefully follow the instructions below to get started.
+
+### 1.1 Requirements
+
+The present code was developped and tested in Python 3.8. The list of requirements is provided in requirements.txt:
+```
+pip install -r requirements.txt
+```
+
+### 1.2 Data
+
+To download the META-DATASET, please follow the details instructions provided at [meta-dataset](https://github.com/google-research/meta-dataset) to obtain the .tfrecords converted data. Once done, make sure all converted dataset are in a single folder, and execute the following script to produce index files:
+
+```
+    bash scripts/make_records/make_index_files.sh <path_to_converted_data>
+```
+This may take a few minutes. Once all this is done, set the `path` variable in `config/base.yaml` to your data folder.
+
+### 1.3 Download pre-trained models
+
+We provide trained Resnet-18 and WRN-2810 models on the training split of ILSVRC_2012 at [checkpoints](https://drive.google.com/file/d/1Sp7OJEK9-RKnlXjz4DEdM-9BHe1j0rtP/view?usp=sharing). All non-episodic baselines use the same checkpoint, stored in the `standard` folder. The results (averaged over 600 episodes) obtained with the provided Resnet-18 are summarized below:
 
 
-The general idea is that each `*.tfrecords` represents a class of a dataset. Therefore, we can create one TFRecordDataset per class. So for each dataset (e.g imagenet), we will have a list of all TFRecordDataset (one per class), which randomly sampled from.
+|  Inductive methods     | Architecture|    ILSVRC  |    Omniglot  |   Aircraft   |    Birds   |   Textures   |  Quick Draw |   Fungi  |  VGG Flower  | Traffic Signs |    MSCOCO   |    Mean    |
+|      ---      |      ---             |    ---     |       ---    |     ---      |     ---    |     ---      |    ---      |    ---   |     ---      |      ---      |     ---     |   ---      |
+|      Finetune |   Resnet-18          |    59.8    |   **60.5**   |   **63.5**   |  **80.6**  |  **80.9**    |   **61.5**  |    45.2  |   **91.1**   |    **55.1**   |     41.8    |  **64.0**  |
+|      ProtoNet |   Resnet-18          |    48.2    |     46.7     |     44.6     |    53.8    |    70.3      |     45.1    |    38.5  |     82.4     |      42.2     |     38.0    |    51.0    |
+|    SimpleShot |   Resnet-18          |  **60.0**  |     54.2     |     55.9     |    78.6    |    77.8      |     57.4    | **49.2** |     90.3     |      49.6     |   **44.2**  |    61.7    |
 
 
-**Important** : If you are training on multiple datasets simultaneously, you may have to raise the maximum number of open files that your system tolerates `ulimit -n 5000` as the code will read as many `*.tfrecords` files as there are classes.
+|  Transductive methods  | Architecture|    ILSVRC  |    Omniglot  |   Aircraft   |    Birds   |   Textures   |  Quick Draw |   Fungi  |  VGG Flower  | Traffic Signs |    MSCOCO   |    Mean    |
+|      ---      |      ---             |    ---     |       ---    |     ---      |     ---    |     ---      |    ---      |    ---   |     ---      |      ---      |     ---     |   ---      |
+|     BD-CSPN   |   Resnet-18          |    60.5    |     54.4     |     55.2     |    80.9    |    77.9      |      57.3   |    50.0  |     91.7     |      47.8     |     43.9    |    62.0    |
+|     TIM-GD    |   Resnet-18          |  **63.6**  |   **65.6**   |   **66.4**   |  **85.6**  |  **84.7**    |    **65.8** | **57.5** |   **95.6**   |    **65.2**   |   **50.9**  |  **70.1**  |
 
-## Requirements
+See Sect. 1.4 and 1.5 to reproduce these results.
 
-#### Downloading data
+### 1.4 Train models from scratch (optional)
 
-Please follow the nicely explained steps in [meta-dataset](https://github.com/google-research/meta-dataset) to download and convert the data to the `*.tfrecords` format
-.
+In order to train you model from scratch, execute scripts/train.sh script:
+```python
+bash scripts/train.sh <method> <architecture> <dataset>
+```
+`method` is to be chosen among all method specific config files in config/, `architecture` in ['resnet18', 'wideres2810'] and `dataset` among all datasets (as named by the META-DATASET converted folders). Note that the hierarchy of arguments passed to `src/train.py` and `src/eval.py` is the following: base_config < method_config < opts arguments.
 
-#### Packages
+**Mutiprocessing** : This code supports distributed training. To leverage this feature, set the `gpus` option accordingly (for instance `gpus: [0, 1, 2, 3]`).
 
-My current setup can be found in `requirements.txt`. Note that the code should work fine with earlier versions of those packages.
+### 1.5 Test your models
 
+Once trained (or once pre-trained models downloaded), you can evaluate your model on the test split of each dataset by running:
+```python
+bash scripts/test.sh <method> <architecture> <base_dataset> <test_dataset>
+```
+Results will be saved in `results/<method>/<exp_no>` where <exp_no> corresponds to a unique hash number of the config (you can only get the same result folder iff all hyperparameters are the same).
 
-## Usage
+## 2. Visualization of results
 
-Let us go together through the simple example provided in `example.py`.
+### 2.1 Training metrics
 
-First, we define two configurations objects (data_config for general info, and episode_config, well, for episodes):
+During training, training loss and validation accuracy are recorded and saved as .npy files in the checkpoint folder. Then, you can use the src/plot.py to plot these metrics (even during training).
+
+***Example 1***:  Plot the metrics of the standard (=non episodic) resnet-18 on ImageNet:
+```python
+python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/standard/
+```
+
+***Example 2***: Plot the metrics of all Resnet-18 trained on ImageNet
 
 ```python
-
-# Recovering configurations
-data_config = config_lib.DataConfig(args)
-episod_config = config_lib.EpisodeDescriptionConfig(args)
+python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/
 ```
+<p align="center">
+    <img src="github_figures/training_metric.png" width="500" height="500"/>
+</p>
 
-Next, we need to get the dataset_specifications, which will recover more specific informations about each dataset contained in each dataset_spec.json. Before, we need to enforce some arguments similar to the original [tutorial](https://github.com/google-research/meta-dataset/blob/main/Intro_to_Metadataset.ipynb))
-```python
-datasets = data_config.sources
-if episod_config.num_ways:
-    if len(datasets) > 1:
-        raise ValueError('For fixed episodes, not tested yet on > 1 dataset')
-    use_dag_ontology_list = [False]
-else:
-    use_bilevel_ontology_list = [False]*len(datasets)
-    # Enable ontology aware sampling for Omniglot and ImageNet.
-    if 'omniglot' in datasets:
-        use_bilevel_ontology_list[datasets.index('omniglot')] = True
-    if 'imagenet' in datasets:
-        use_bilevel_ontology_list[datasets.index('imagenet')] = True
+### 2.2 Inference metrics
 
-    use_bilevel_ontology_list = use_bilevel_ontology_list
-    use_dag_ontology_list = [False]*len(datasets)
-episod_config.use_bilevel_ontology_list = use_bilevel_ontology_list
-episod_config.use_dag_ontology_list = use_dag_ontology_list
+For methods that perform **test-time optimization** (for instance MAML, TIM, Finetune ..), method specific metrics are plotted in real-time (versus test iterations) and averaged over test epidodes, which can allow you to track unexpected behavior easily. Such metrics are implemented in `src/metrics/`, and the choice of which metric to plot is specificied through the  `eval_metrics`  option in the method .yaml config file. An example with TIM method is provided below.
 
-all_dataset_specs = []
-for dataset_name in datasets:
-    dataset_records_path = os.path.join(data_config.path, dataset_name)
-    dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
-    all_dataset_specs.append(dataset_spec)
-```
+<p align="center">
+    <img src="github_figures/inference_metrics.png" width="600" height="600"/>
+</p>
 
-Once the dataset_spec of each dataset has been recovered, we are ready to get the datasets. For an episodic dataset:
-```python
-# Form an episodic dataset
-split = Split["TRAIN"]
-episodic_dataset = pipeline.make_episode_pipeline(dataset_spec_list=all_dataset_specs,
-                                                  split=split,
-                                                  data_config=data_config,
-                                                  episode_descr_config=episod_config)
+### 2.3 Visualization of episodes
 
-# Use a standard dataloader
-episodic_loader = DataLoader(dataset=episodic_dataset,
-                             batch_size=1,
-                             num_workers=data_config.num_workers)
+By setting the option `visu: True` at inference, you can visualize samples of episodes. An example of such visualization is given below:
+<p align="center">
+    <img src="github_figures/episode.png" width="600" height="600"/>
+</p>
 
-# Training or validation loop
-for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
-    support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
-    query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
-    # Do some operations
-```
-For a standard batch dataset:
+The samples will be saved in results/. 
+All relevant optons can be found in the `base.yaml` file, in the EVAL-VISU section.
 
-```python
-# Training or validation loop
-for i, (support, query, support_labels, query_labels) in enumerate(episodic_loader):
-    support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
-    query, query_labels = query.to(device), query_labels.to(device, non_blocking=True)
-    # Do some operations
+## 3. Incorporate your own method
 
-# Form a batch dataset
-batch_dataset = pipeline.make_batch_pipeline(dataset_spec_list=all_dataset_specs,
-                                             split=split,
-                                             data_config=data_config)
+This code was designed to allow easy incorporation of new methods. 
 
-# Use a standard dataloader
-batch_loader = DataLoader(dataset=batch_dataset,
-                          batch_size=data_config.batch_size,
-                          num_workers=data_config.num_workers)
-```
+**Step 1**: Add your method .py file to `src/methods/` by following the template provided in src/methods/method.py. 
+
+**Step 2**: Add import in `src/methods/__init__.py`
+
+**Step 3**: Add your method .yaml config file including the required options `episodic_training` and `method` (name of the class corresponding to your method). Also make sure that if your method performs test-time optimization, you also properly set the option `iter` that specifies the number of optimization steps performed at inference (this argument is also used to plot the inference metrics, see section 2.2).
 
 
-**Where and how to modify options ?**  All necessary options can be found in the `parse_args()` function. To see all available options:
-```
-python3 example.py --help
-```
+## 4. Contributions
 
-For instance, if you want the combination of 'dtd' and 'vgg_flower' dataset:
-```python
-python3 example.py with --batch_size 124 --sources 'ilsvrc_2012' 'dtd' --data_path 'path_to_converted_folder'
-```
+Contributions are more than welcome. In particular, if you want to add methods/pre-trained models, please make PRs.
 
 
+## 5. Citation
 
-## Contributions
+If you find this repo useful in your research, please consider citing the following paper:
+Additionally, do not hesitate to file issues if you encounter problems, or reach out directly to Malik Boudiaf (malik.boudiaf.1@etsmtl.net).
 
-This repo was started to make it easy for Pytorch users to integrate meta-dataset into their framework. Please feel free to make pull requests to improve it ! If you have any question or remark, please file an issue or reach out to malik.boudiaf.1@etsmtl.net :-)
 
-## Acknowledgments
+## 6. Acknowledgments
 
 I thank the authors of [meta-dataset](https://github.com/google-research/meta-dataset) for releasing their code and the author of [open-source TFRecord reader](https://github.com/vahidk/tfrecord) for open sourcing an awesome Pytorch-compatible TFRecordReader !

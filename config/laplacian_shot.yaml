@@ -1,0 +1,12 @@
+METHOD:
+  method: 'LaplacianShot'
+  episodic_training: False
+  knn: 2
+  lmd: 0.01
+  proto_rect: 0
+  normalize_features: True
+  center_features: False
+  merge_support: False
+  iter: 20
+  hyperparams: ['method', 'base_sources', 'test_sources', 'arch', 'knn', 'lmd', 'proto_rect']
+  eval_metrics: ['Acc', 'LaplacianEnergy']

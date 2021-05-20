@@ -1,0 +1,16 @@
+TRAINING:
+  episodic_training: True
+  num_ways: 5
+  num_support: 5
+  num_query: 20
+  val_batch_size: 1
+
+METHOD:
+  method: 'MAML'
+  temp: 1
+  train_iter: 1
+  iter: 10
+  step_size: 0.4
+  first_order: True
+  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'step_size', 'iter']
+  eval_metrics: ['Acc']

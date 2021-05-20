@@ -1,0 +1,11 @@
+TRAINING:
+  episodic_training: False
+
+METHOD:
+  method: 'TIM_ADM'
+  iter: 200
+  alpha: 1.0
+  temp: 15
+  loss_weights: [0.5, 10., 0.]  # [Xent, H(Y), H(Y|X)]
+  eval_metrics: ['Acc', 'MI', 'CondEnt', 'MargEnt', 'XEnt']
+  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'loss_weights']

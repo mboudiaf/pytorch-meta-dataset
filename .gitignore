@@ -1,6 +1,8 @@
 scripts/
 conversion/
-
+checkpoints/
+results/
+deploy/
 # Sublime files
 *.sublime-project
 *.sublime-workspace

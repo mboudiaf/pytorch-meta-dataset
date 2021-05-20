@@ -1,0 +1,15 @@
+TRAINING:
+  num_ways: 5
+  num_support: 5
+  num_query: 20
+  val_batch_size: 2
+  batch_size: 2
+
+MODEL:
+  use_fc: False
+
+METHOD:
+  method: 'ProtoNet'
+  episodic_training: True
+  hyperparams: ['method', 'arch', 'base_sources', 'test_sources']
+  eval_metrics: ['Acc']

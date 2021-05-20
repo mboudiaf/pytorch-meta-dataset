@@ -1,0 +1,10 @@
+METHOD:
+  method: 'Finetune'
+  episodic_training: False
+  iter: 200
+  finetune_lr: 0.01
+  extract_batch_size: 10
+  temp: 1
+  finetune_all_layers: False
+  eval_metrics: ['Acc', 'XEnt']
+  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'finetune_all_layers']
