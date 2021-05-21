@@ -27,8 +27,6 @@ import torch.backends.cudnn as cudnn
 from .datasets.loader import get_dataloader
 from .methods import FSmethod
 
-# torch.autograd.set_detect_anomaly(True)
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Eval')
