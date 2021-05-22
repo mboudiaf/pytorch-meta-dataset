@@ -1,28 +1,29 @@
 import os
-import torch
-import random
-import torch.backends.cudnn as cudnn
-from src.datasets.utils import Split
-from tqdm import trange
-import torch.multiprocessing as mp
-import argparse
-import pandas as pd
-import numpy as np
-import torch.nn as nn
-from torch.nn.parallel import DistributedDataParallel as DDP
 import json
 import shutil
+import random
+import argparse
 from pathlib import Path
 
-from .models.ingredient import get_model
+import torch
+import numpy as np
+import pandas as pd
+import torch.nn as nn
+import torch.multiprocessing as mp
+import torch.backends.cudnn as cudnn
+from tqdm import trange
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+from src.datasets.utils import Split
+from .datasets.loader import get_dataloader
 from .methods import __dict__ as all_methods
 from .metrics import __dict__ as all_metrics
-from .datasets.loader import get_dataloader
-from .utils import make_episode_visualization, plot_metrics
+from .models.ingredient import get_model
 from .models.meta.metamodules.module import MetaModule
-from .utils import compute_confidence_interval, load_checkpoint, get_model_dir, \
-                   load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port, \
-                   setup, cleanup
+from .utils import make_episode_visualization, plot_metrics
+from .utils import (compute_confidence_interval, load_checkpoint, get_model_dir,
+                    load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
+                    setup, cleanup)
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,22 +31,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--base_config', type=str, required=True, help='config file')
     parser.add_argument('--method_config', type=str, default=True, help='Base config file')
     parser.add_argument('--opts', default=None, nargs=argparse.REMAINDER)
+
     args = parser.parse_args()
     assert args.base_config is not None
+
     cfg = load_cfg_from_cfg_file(args.base_config)
     cfg.update(load_cfg_from_cfg_file(args.method_config))
+
     if args.opts is not None:
         cfg = merge_cfg_from_list(cfg, args.opts)
-    if args.opts is not None:
-        cfg = merge_cfg_from_list(cfg, args.opts)
+
     return cfg
 
 
-def copy_config(args, exp_root: str) -> None:
+def copy_config(args, exp_root: Path) -> None:
     # ========== Copy source code ==========
     p = Path(".")
     python_files = list(p.glob('**/*.py'))
-    filtered_list = [file for file in python_files if 'checkpoints' not in str(file) and 'results' not in str(file)]
+    filtered_list = [file
+                     for file in python_files
+                     if 'checkpoints' not in str(file) and 'results' not in str(file)]
+
     for file in filtered_list:
         file_dest = exp_root / 'code_snapshot' / file
         file_dest.parent.mkdir(parents=True, exist_ok=True)
@@ -66,7 +72,8 @@ def hash_config(args: argparse.Namespace) -> str:
                 hash_ = round(value, 3)
             else:
                 hash_ = sum([int(v) if type(v) in [float, int, bool] else sum(v.encode()) for v in value])
-            res += hash_ * random.randint(1, 1e6)
+            res += hash_ * random.randint(1, int(1e6))
+
     return str(res)[-10:].split('.')[0]
 
 
@@ -136,6 +143,7 @@ def main_worker(rank: int,
     if not isinstance(model, MetaModule) and world_size > 1:
         model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
         model = DDP(model, device_ids=[rank])
+
     model_path = get_model_dir(args=args)
     print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
     load_checkpoint(model=model, model_path=model_path, type=args.model_tag)
@@ -159,10 +167,10 @@ def main_worker(rank: int,
     acc = 0.
     tqdm_bar = trange(int(args.val_episodes / args.val_batch_size))
     for i in tqdm_bar:
-
         # ======> Reload model checkpoint (some methods may modify model) <=======
         support, query, support_labels, query_labels = next(iter_loader)
         # print(query_labels.size())
+
         support_labels = support_labels.to(device, non_blocking=True)
         query_labels = query_labels.to(device, non_blocking=True)
         task_ids = (i * args.val_batch_size, (i + 1) * args.val_batch_size)
@@ -188,14 +196,14 @@ def main_worker(rank: int,
             visu_path = os.path.join(exp_root, 'episode_samples', args.loader)
             os.makedirs(visu_path, exist_ok=True)
             path = os.path.join(visu_path, f'visu_{i}.png')
-            make_episode_visualization(
-                       args,
-                       support[0].cpu().numpy(),
-                       query[0].cpu().numpy(),
-                       support_labels[0].cpu().numpy(),
-                       query_labels[0].cpu().numpy(),
-                       soft_preds_q[0].cpu().numpy(),
-                       path)
+            make_episode_visualization(args,
+                                       support[0].cpu().numpy(),
+                                       query[0].cpu().numpy(),
+                                       support_labels[0].cpu().numpy(),
+                                       query_labels[0].cpu().numpy(),
+                                       soft_preds_q[0].cpu().numpy(),
+                                       path)
+
         # ======> Plot metrics <=======
         if i % args.plot_freq == 0:
             update_csv(args=args,
@@ -211,20 +219,25 @@ def update_csv(args: argparse.Namespace,
                path: str):
     if 'Acc' not in metrics:
         raise ValueError('Cannot save csv result without Accuracy metric')
+
     # res = OrderedDict()
     try:
         res = pd.read_csv(path)
-    except:
+    except FileNotFoundError:
         res = pd.DataFrame({})
+
     records = res.to_dict('records')
     l2n_mean, l2n_conf = compute_confidence_interval(metrics['Acc'].values[:task_id, -1])
 
     # If entry did not exist, just create it
-    new_entry = {param: args[param] for param in args.hyperparams}
+    new_entry = {param: args[param]
+                 for param in args.hyperparams}
     new_entry['task'] = task_id
     new_entry['acc'] = round(l2n_mean, 4)
     new_entry['std'] = round(l2n_conf, 4)
+
     records = [new_entry]
+
     # Save back to dataframe
     df = pd.DataFrame.from_records(records)
     df.to_csv(path, index=False)

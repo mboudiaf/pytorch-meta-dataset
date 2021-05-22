@@ -1,13 +1,14 @@
 from pathlib import Path
+from itertools import cycle
+from collections import defaultdict
+
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from itertools import cycle
-import argparse
-from collections import defaultdict
 plt.style.use('ggplot')
 
 colors = ["g", "b", "m", 'y', 'k', 'chartreuse', 'coral', 'gold', 'lavender',
-               'silver', 'tan', 'teal', 'wheat', 'orchid', 'orange', 'tomato']
+          'silver', 'tan', 'teal', 'wheat', 'orchid', 'orange', 'tomato']
 
 styles = ['--', '-.', ':', '-']
 
@@ -20,8 +21,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--linewidth', type=int, default=2.)
     parser.add_argument('--fontfamily', type=str, default='sans-serif')
     parser.add_argument('--fontweight', type=str, default='normal')
-    parser.add_argument('--figsize', type=list, default=[10, 10])
-    parser.add_argument('--dpi', type=list, default=200,
+    parser.add_argument('--figsize', type=int, nargs=2, default=[10, 10])
+    parser.add_argument('--dpi', type=int, default=200,
                         help='Dots per inch when saving the fig')
     parser.add_argument('--max_col', type=int, default=1,
                         help='Maximum number of columns for legend')

@@ -1,31 +1,32 @@
-import torch
-import time
-import torch.nn as nn
-import numpy as np
 import os
-from functools import partial
-import argparse
-from typing import Dict, Tuple
-from tqdm import tqdm
+import time
 import random
+import argparse
+from functools import partial
+from typing import Dict, Tuple
+
+import torch
+import numpy as np
+import torch.nn as nn
 import torch.utils.data
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch import tensor
-
-from .methods import __dict__ as all_methods
-from .losses import __losses__
-from .utils import AverageMeter, save_checkpoint, get_model_dir, \
-                   load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port, \
-                   setup, cleanup, main_process
-from .optim import get_optimizer, get_scheduler
 import torch.multiprocessing as tmp
+import torch.backends.cudnn as cudnn
+from tqdm import tqdm
+from torch import tensor, Tensor
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+from .losses import __losses__
+from .methods import FSmethod
+from .methods import __dict__ as all_methods
+from .optim import get_optimizer, get_scheduler
 from .datasets.utils import Split
+from .datasets.loader import get_dataloader
 from .models.ingredient import get_model
 from .models.meta.metamodules.module import MetaModule
-import torch.backends.cudnn as cudnn
-from .datasets.loader import get_dataloader
-from .methods import FSmethod
+from .utils import (AverageMeter, save_checkpoint, get_model_dir,
+                    load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
+                    setup, cleanup, main_process)
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,32 +35,36 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--method_config', type=str, default=True, help='Base config file')
     parser.add_argument('--opts', default=None, nargs=argparse.REMAINDER)
     args = parser.parse_args()
+
     assert args.base_config is not None
+
     cfg = load_cfg_from_cfg_file(args.base_config)
     cfg.update(load_cfg_from_cfg_file(args.method_config))
+
     if args.opts is not None:
         cfg = merge_cfg_from_list(cfg, args.opts)
-    if args.opts is not None:
-        cfg = merge_cfg_from_list(cfg, args.opts)
+
     return cfg
 
 
 def meta_val(args: argparse.Namespace,
              model: torch.nn.Module,
              method: FSmethod,
-             val_loader: torch.utils.data.DataLoader) -> Tuple[tensor, tensor]  :
+             val_loader: torch.utils.data.DataLoader) -> Tuple[Tensor, Tensor]:
     # Device
     device = dist.get_rank()
     model.eval()
     method.eval()
 
     # Metrics
-    total_episodes = int(args.val_episodes / args.val_batch_size)
     episode_acc = tensor([0.], device=device)
+
+    total_episodes = int(args.val_episodes / args.val_batch_size)
     tqdm_bar = tqdm(val_loader, total=total_episodes)
     for i, (support, query, support_labels, query_labels) in enumerate(tqdm_bar):
         if i >= total_episodes:
             break
+
         y_s = support_labels.to(device, non_blocking=True)
         y_q = query_labels.to(device, non_blocking=True)
 
@@ -68,13 +73,17 @@ def meta_val(args: argparse.Namespace,
                                  query=query,
                                  y_s=y_s,
                                  y_q=y_q)
+
         soft_preds_q = soft_preds_q.to(device).detach()
         episode_acc += (soft_preds_q.argmax(-1) == y_q).float().mean()
 
         tqdm_bar.set_description('Acc {:.2f}'.format((episode_acc / (i + 1) * 100).item()))
+
     n_episodes = tensor(total_episodes, device=device)
+
     model.train()
     method.train()
+
     return episode_acc, n_episodes
 
 
@@ -83,7 +92,7 @@ def main_worker(rank: int,
                 args: argparse.Namespace) -> None:
     print(f"==> Running process rank {rank}.")
     setup(args.port, rank, world_size)
-    device = rank
+    device: int = rank
 
     if args.seed is not None:
         args.seed += rank
@@ -130,8 +139,10 @@ def main_worker(rank: int,
     top1 = AverageMeter()
 
     if main_process(args):
-        metrics: Dict[str, tensor] = {"train_loss": torch.zeros(int(args.num_updates / args.print_freq)).type(torch.float32),
-                                      "val_acc": torch.zeros(int(args.num_updates / args.eval_freq)).type(torch.float32)}
+        metrics: Dict[str, Tensor] = {"train_loss": torch.zeros(args.num_updates // args.print_freq,
+                                                                dtype=torch.float32),
+                                      "val_acc": torch.zeros(args.num_updates // args.eval_freq,
+                                                             dtype=torch.float32)}
 
     # ============ Optimizer ================
     optimizer = get_optimizer(args=args, model=model)
@@ -153,7 +164,6 @@ def main_worker(rank: int,
     best_val_acc1 = 0.
     tqdm_bar = tqdm(train_loader, total=args.num_updates)
     for i, data in enumerate(tqdm_bar):
-
         if i >= args.num_updates:
             break
 
@@ -181,7 +191,7 @@ def main_worker(rank: int,
             scheduler.step()
 
         # ============ Log metrics ============
-        b_size = tensor([args.batch_size]).to(device)
+        b_size = tensor([args.batch_size]).to(device)  # type: ignore
         if args.distributed:
             dist.all_reduce(b_size)
             dist.all_reduce(loss)
@@ -191,7 +201,7 @@ def main_worker(rank: int,
             batch_time.update(time.time() - t0, i == 0)
             t0 = time.time()
 
-        train_loss = losses.avg
+        # train_loss = losses.avg
 
         # ============ Validation ============
         if i % args.eval_freq == 0:
@@ -199,9 +209,11 @@ def main_worker(rank: int,
             if args.distributed:
                 dist.all_reduce(val_acc)
                 dist.all_reduce(n_episodes)
+
             val_acc /= n_episodes
             is_best = (val_acc > best_val_acc1)
             best_val_acc1 = max(val_acc, best_val_acc1)
+
             if main_process(args):
                 save_checkpoint(state={'iter': i,
                                        'arch': args.arch,
@@ -209,9 +221,11 @@ def main_worker(rank: int,
                                        'best_prec1': best_val_acc1},
                                 is_best=is_best,
                                 folder=model_dir)
+
                 for k in metrics:
                     if 'val' in k:
                         metrics[k][int(i / args.eval_freq)] = eval(k)
+
                 for k, e in metrics.items():
                     path = os.path.join(model_dir, f"{k}.npy")
                     np.save(path, e.cpu().numpy())

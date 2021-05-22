@@ -1,10 +1,12 @@
-import torch
 from typing import List
 
+import torch
+from torch import Tensor
 
-def ECE_(soft_preds: torch.tensor,
-         targets: torch.tensor,
-         reduc_dims: List[int]) -> torch.tensor:
+
+def ECE_(soft_preds: Tensor,
+         targets: Tensor,
+         reduc_dims: List[int]) -> Tensor:
     '''
     args:
 
@@ -24,11 +26,12 @@ def ECE_(soft_preds: torch.tensor,
     C = (highest_prob.unsqueeze(-1) * binned_indexes).sum(reduc_dims) / B  # [M,]
     N = torch.tensor(targets.size()).prod()
     ECE = ((B * torch.abs(A - C))).sum(-1, keepdim=True) / N
+
     return ECE
 
 
-def vectorized_binning(probs: torch.tensor,
-                       bins: torch.tensor) -> torch.tensor:
+def vectorized_binning(probs: Tensor,
+                       bins: Tensor) -> Tensor:
     '''
     args:
 
@@ -43,6 +46,7 @@ def vectorized_binning(probs: torch.tensor,
     probs = probs.unsqueeze(-1)  # [*, 1]
     bins_indexes = (probs >= bins).long().sum(-1, keepdim=True)  # [*,]
 
-    ones_hot_indexes = torch.zeros(batch_shape + bins.shape[-1:]).to(probs.device)  # [*, ]
+    ones_hot_indexes = torch.zeros(batch_shape + bins.shape[-1:]).to(probs.device)  # [*,]
     ones_hot_indexes.scatter_(-1, bins_indexes, 1.)  #
+
     return ones_hot_indexes
