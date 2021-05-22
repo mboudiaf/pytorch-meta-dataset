@@ -1,20 +1,36 @@
 # PyTorch META-DATASET
 
-
-##  Overview
 This repo contains a PyTorch implementation of [meta-dataset](https://github.com/google-research/meta-dataset) and a unified implementation of some few-shot methods. This repo may be useful to you if you:
 
-- Want some pre-trained ImageNet models in PyTorch for META-DATASET
-- Want to benchmark your method on META-DATASET (but do not want to mix your PyTorch code with the original TensorFlow implementation)
-- Are looking for a codebase to visualize few-shot episodes
+- want some pre-trained ImageNet models in PyTorch for META-DATASET;
+- want to benchmark your method on META-DATASET (but do not want to mix your PyTorch code with the original TensorFlow implementation);
+- are looking for a codebase to visualize few-shot episodes.
 
 Additional benefits:
 
-1. Contrary to original TF code, this repo can be properly seeded, allowing to repeat the same random series of episodes if needed
-2. Contrary to the original repo, this code shuffles data without the need to use a buffer, hence reducing the memory consumption
-3. Better results can be obtained using this repo thanks to an enhanced way of resizing images. More details in the paper.
+1. contrary to original TF code, this repo can be properly seeded, allowing to repeat the same random series of episodes if needed;
+2. contrary to the original repo, this code shuffles data without the need to use a buffer, hence reducing the memory consumption;
+3. better results can be obtained using this repo thanks to an enhanced way of resizing images. More details in the paper.
 
-Note that **this code also includes the original implementation** for comparison (using the PyTorch workaround proposed by the authors). If you wish to use the original implementation, set the option `loader_version: 'tf'` in base.yaml (by default set to `pytorch`).
+Note that **this code also includes the original implementation** for comparison (using the PyTorch workaround proposed by the authors). If you wish to use the original implementation, set the option `loader_version: 'tf'` in [`base.yaml`](config/base.yaml#L44) (by default set to `pytorch`).
+
+## Table of contents
+* [Table of contents](#table-of-contents)
+* [1. Setting up](#1-setting-up)
+    * [1.1 Requirements](#11-requirements)
+    * [1.2 Data](#12-data)
+    * [1.3 Download pre-trained models](#13-download-pre-trained-models)
+    * [1.4 Train models from scratch (optional)](#14-train-models-from-scratch-optional)
+    * [1.5 Test your models](#15-test-your-models)
+* [2. Visualization of results](#2-visualization-of-results)
+    * [2.1 Training metrics](#21-training-metrics)
+    * [2.2 Inference metrics](#22-inference-metrics)
+    * [2.3 Visualization of episodes](#23-visualization-of-episodes)
+* [3. Incorporate your own method](#3-incorporate-your-own-method)
+* [4. Contributions](#4-contributions)
+* [5. Citation](#5-citation)
+* [6. Acknowledgements](#6-acknowledgements)
+
 
 ## 1. Setting up
 
@@ -23,18 +39,18 @@ Please carefully follow the instructions below to get started.
 ### 1.1 Requirements
 
 The present code was developped and tested in Python 3.8. The list of requirements is provided in requirements.txt:
-```
+```bash
 pip install -r requirements.txt
 ```
 
 ### 1.2 Data
 
-To download the META-DATASET, please follow the details instructions provided at [meta-dataset](https://github.com/google-research/meta-dataset) to obtain the .tfrecords converted data. Once done, make sure all converted dataset are in a single folder, and execute the following script to produce index files:
+To download the META-DATASET, please follow the details instructions provided at [meta-dataset](https://github.com/google-research/meta-dataset) to obtain the `.tfrecords` converted data. Once done, make sure all converted dataset are in a single folder, and execute the following script to produce index files:
 
+```bash
+bash scripts/make_records/make_index_files.sh <path_to_converted_data>
 ```
-    bash scripts/make_records/make_index_files.sh <path_to_converted_data>
-```
-This may take a few minutes. Once all this is done, set the `path` variable in `config/base.yaml` to your data folder.
+This may take a few minutes. Once all this is done, set the `path` variable in [`config/base.yaml`](config/base.yaml#L37) to your data folder.
 
 ### 1.3 Download pre-trained models
 
@@ -58,17 +74,17 @@ See Sect. 1.4 and 1.5 to reproduce these results.
 ### 1.4 Train models from scratch (optional)
 
 In order to train you model from scratch, execute scripts/train.sh script:
-```python
+```bash
 bash scripts/train.sh <method> <architecture> <dataset>
 ```
-`method` is to be chosen among all method specific config files in config/, `architecture` in ['resnet18', 'wideres2810'] and `dataset` among all datasets (as named by the META-DATASET converted folders). Note that the hierarchy of arguments passed to `src/train.py` and `src/eval.py` is the following: base_config < method_config < opts arguments.
+`method` is to be chosen among all method specific config files in [config/](/config), `architecture` in ['resnet18', 'wideres2810'] and `dataset` among all datasets (as named by the META-DATASET converted folders). Note that the hierarchy of arguments passed to `src/train.py` and `src/eval.py` is the following: base_config < method_config < opts arguments.
 
 **Mutiprocessing** : This code supports distributed training. To leverage this feature, set the `gpus` option accordingly (for instance `gpus: [0, 1, 2, 3]`).
 
 ### 1.5 Test your models
 
 Once trained (or once pre-trained models downloaded), you can evaluate your model on the test split of each dataset by running:
-```python
+```bash
 bash scripts/test.sh <method> <architecture> <base_dataset> <test_dataset>
 ```
 Results will be saved in `results/<method>/<exp_no>` where <exp_no> corresponds to a unique hash number of the config (you can only get the same result folder iff all hyperparameters are the same).
@@ -80,13 +96,13 @@ Results will be saved in `results/<method>/<exp_no>` where <exp_no> corresponds 
 During training, training loss and validation accuracy are recorded and saved as .npy files in the checkpoint folder. Then, you can use the src/plot.py to plot these metrics (even during training).
 
 ***Example 1***:  Plot the metrics of the standard (=non episodic) resnet-18 on ImageNet:
-```python
+```bash
 python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/standard/
 ```
 
 ***Example 2***: Plot the metrics of all Resnet-18 trained on ImageNet
 
-```python
+```bash
 python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/
 ```
 <p align="center">
@@ -95,7 +111,7 @@ python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/
 
 ### 2.2 Inference metrics
 
-For methods that perform **test-time optimization** (for instance MAML, TIM, Finetune ..), method specific metrics are plotted in real-time (versus test iterations) and averaged over test epidodes, which can allow you to track unexpected behavior easily. Such metrics are implemented in `src/metrics/`, and the choice of which metric to plot is specificied through the  `eval_metrics`  option in the method .yaml config file. An example with TIM method is provided below.
+For methods that perform **test-time optimization** (for instance MAML, TIM, Finetune, ...), method specific metrics are plotted in real-time (versus test iterations) and averaged over test epidodes, which can allow you to track unexpected behavior easily. Such metrics are implemented in `src/metrics/`, and the choice of which metric to plot is specificied through the  `eval_metrics` option in the method .yaml config file. An example with TIM method is provided below.
 
 <p align="center">
     <img src="github_figures/inference_metrics.png" width="600" height="600"/>
@@ -124,12 +140,20 @@ This code was designed to allow easy incorporation of new methods.
 
 ## 4. Contributions
 
-Contributions are more than welcome. In particular, if you want to add methods/pre-trained models, please make PRs.
+Contributions are more than welcome. In particular, if you want to add methods/pre-trained models, do make a pull-request.
 
 
 ## 5. Citation
 
 If you find this repo useful in your research, please consider citing the following paper:
+```bibtex
+@article{boudiaf2020unifying,
+  title={Mutual-Information Based Few-Shot Classification},
+  author={Boudiaf, Malik and Ziko, Imtiaz Masud and Rony, J{\'e}r{\^o}me and Dolz, Jose and Ben Ayed, Ismail and Piantanida, Pablo},
+  journal={arXiv preprint arXiv:YYMM.NNNN},
+  year={2021}
+}
+```
 Additionally, do not hesitate to file issues if you encounter problems, or reach out directly to Malik Boudiaf (malik.boudiaf.1@etsmtl.net).
 
 
