@@ -1,12 +1,11 @@
-from .tfrecord.torch.dataset import TFRecordDataset
 import os
 from typing import Union
-import numpy as np
 
-from .dataset_spec import HierarchicalDatasetSpecification as HDS
-from .dataset_spec import BiLevelDatasetSpecification as BDS
-from .dataset_spec import DatasetSpecification as DS
 from .utils import Split
+from .tfrecord.torch.dataset import TFRecordDataset
+from .dataset_spec import DatasetSpecification as DS
+from .dataset_spec import BiLevelDatasetSpecification as BDS
+from .dataset_spec import HierarchicalDatasetSpecification as HDS
 
 
 class Reader(object):
