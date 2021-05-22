@@ -29,16 +29,16 @@ OPTIM:
 
 DATA:
      # Data config
-    image_size: 84  
-    base_sources: ['ilsvrc_2012']  
-    val_sources: ['ilsvrc_2012']  
-    test_sources: ['ilsvrc_2012']  
-    batch_size: 256  
-    path: '/ssd/dataset/natural/converted'  
-    split: 'train'  
-    num_workers: 4  
-    train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']  
-    test_transforms: ['resize', 'center_crop', 'to_tensor', 'normalize']  
+    image_size: 84
+    base_sources: ['ilsvrc_2012']
+    val_sources: ['ilsvrc_2012']
+    test_sources: ['ilsvrc_2012']
+    batch_size: 256
+    path: '/ssd/dataset/natural/converted'
+    split: 'train'
+    num_workers: 4
+    train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']
+    test_transforms: ['resize', 'center_crop', 'to_tensor', 'normalize']
     num_unique_descriptions: 0
     shuffle: True
     loader_version: 'pytorch'
@@ -64,20 +64,20 @@ EVAL-VISU:
     visu_freq: 10
 
 EVAL-EPISODES:
-    num_ways: 10  
-    num_support: 10  
-    num_query: 15  
-    min_ways: 5  
-    max_ways_upper_bound: 50  
-    max_num_query: 10  
-    max_support_set_size: 500  
-    max_support_size_contrib_per_class: 100  
-    min_log_weight: -0.69314718055994529  
-    max_log_weight: 0.69314718055994529  
-    ignore_dag_ontology: False  
-    ignore_bilevel_ontology: False  
-    ignore_hierarchy_probability: 0  
-    min_examples_in_class: 0  
+    num_ways: 10
+    num_support: 10
+    num_query: 15
+    min_ways: 5
+    max_ways_upper_bound: 50
+    max_num_query: 10
+    max_support_set_size: 500
+    max_support_size_contrib_per_class: 100
+    min_log_weight: -0.69314718055994529
+    max_log_weight: 0.69314718055994529
+    ignore_dag_ontology: False
+    ignore_bilevel_ontology: False
+    ignore_hierarchy_probability: 0
+    min_examples_in_class: 0
 
 METHOD:
     episodic_training: False
