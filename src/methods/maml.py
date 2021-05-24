@@ -1,10 +1,10 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import argparse
-from collections import OrderedDict
 from typing import Dict, Tuple
-from torch import tensor
+from collections import OrderedDict
+
+import torch
+import torch.nn.functional as F
+from torch import Tensor
 
 from .method import FSmethod
 from ..models.meta.metamodules import MetaModule
@@ -13,39 +13,42 @@ from ..metrics import Metric
 
 
 class MAML(FSmethod):
-
     """
     Implementation of MAML (ICML 2017) https://arxiv.org/abs/1703.03400.
     Inspired by https://github.com/tristandeleu/pytorch-meta/tree/master/examples/maml
     """
 
     def __init__(self, args: argparse.Namespace):
-
         self.step_size = args.step_size
         self.first_order = args.first_order
         self.iter = args.iter
         self.train_iter = args.iter
+
         super().__init__(args)
 
     def forward(self,
                 model: torch.nn.Module,
-                support: torch.tensor,
-                query: torch.tensor,
-                y_s: torch.tensor,
-                y_q: torch.tensor,
+                support: Tensor,
+                query: Tensor,
+                y_s: Tensor,
+                y_q: Tensor,
                 metrics: Dict[str, Metric] = None,
-                task_ids: Tuple[int, int] = None)-> Tuple[tensor, tensor]:
-        """
-        """
+                task_ids: Tuple[int, int] = None) -> Tuple[Optional[Tensor], Tensor]:
         iter_ = self.train_iter if self.training else self.iter
+
         model.train()
         device = torch.distributed.get_rank()
+
         outer_loss = torch.tensor(0., device=device)
         soft_preds = torch.zeros_like(get_one_hot(y_q, y_s.unique().size(0)))
-        for task_idx, (x_s, y_support, x_q, y_query) in \
-                enumerate(zip(support, y_s, query, y_q)):
+
+        for task_idx, (x_s, y_support, x_q, y_query) in enumerate(zip(support,
+                                                                      y_s,
+                                                                      query,
+                                                                      y_q)):
             params = None
             x_s, x_q = x_s.to(device), x_q.to(device)
+
             for i in range(iter_):
                 train_logit = model(x_s, params=params)
                 inner_loss = F.cross_entropy(train_logit, y_support)
@@ -60,8 +63,10 @@ class MAML(FSmethod):
 
         with torch.set_grad_enabled(self.training):
             query_logit = model(x_q, params=params)
+
             outer_loss += F.cross_entropy(query_logit, y_query)
             soft_preds[task_idx] = query_logit.detach().softmax(-1)
+
         return outer_loss, soft_preds
 
     def gradient_update_parameters(self,
@@ -98,6 +103,7 @@ class MAML(FSmethod):
 
         if params is None:
             params = OrderedDict(model.meta_named_parameters())
+
         create_graph = (not self.first_order) and self.training
         grads = torch.autograd.grad(loss,
                                     params.values(),

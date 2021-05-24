@@ -1,9 +1,11 @@
+import argparse
+from typing import Dict, Optional, Tuple
+
 import torch
 import torch.nn as nn
-import argparse
-from typing import Dict, Tuple
+from torch import Tensor
+
 from ..metrics import Metric
-from torch import tensor
 
 
 class FSmethod(nn.Module):
@@ -15,12 +17,12 @@ class FSmethod(nn.Module):
 
     def forward(self,
                 model: torch.nn.Module,
-                support: tensor,
-                query: tensor,
-                y_s: tensor,
-                y_q: tensor,
+                support: Tensor,
+                query: Tensor,
+                y_s: Tensor,
+                y_q: Tensor,
                 metrics: Dict[str, Metric] = None,
-                task_ids: Tuple[int, int] = None) -> Tuple[tensor, tensor]:
+                task_ids: Tuple[int, int] = None) -> Tuple[Optional[Tensor], Tensor]:
         '''
         args:
             model: Network to train/test with
@@ -42,3 +44,22 @@ class FSmethod(nn.Module):
             soft_preds: Tensor of shape [n_tasks, n_query, K], where K is the number of classes in the task,
                         representing the soft predictions of the method for the input query samples. 
         '''
+        raise NotImplementedError
+
+    def record_info(self,
+                    metrics: Optional[Dict],
+                    task_ids: Optional[Tuple],
+                    iteration: int,
+                    new_time: float,
+                    support: Tensor,
+                    query: Tensor,
+                    y_s: Tensor,
+                    y_q: Tensor) -> None:
+        """
+        inputs:
+            support : Tensor of shape [n_task, s_shot, feature_dim]
+            query : Tensor of shape [n_task, q_shot, feature_dim]
+            y_s : Tensor of shape [n_task, s_shot]
+            y_q : Tensor of shape [n_task, q_shot]
+        """
+        raise NotImplementedError

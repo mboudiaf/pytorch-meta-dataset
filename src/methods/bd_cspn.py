@@ -1,13 +1,14 @@
-import torch.nn.functional as F
-import argparse
-import torch
 import time
-from typing import Dict, Tuple
-from torch import tensor
+import argparse
+from typing import Dict, Optional, Tuple
 
-from .utils import get_one_hot, extract_features, compute_centroids
+import torch
+import torch.nn.functional as F
+from torch import Tensor
+
 from .method import FSmethod
 from ..metrics import Metric
+from .utils import get_one_hot, extract_features, compute_centroids
 
 
 class BDCSPN(FSmethod):
@@ -26,14 +27,14 @@ class BDCSPN(FSmethod):
         super().__init__(args)
 
     def record_info(self,
-                    metrics: dict,
-                    task_ids: tuple,
+                    metrics: Optional[Dict],
+                    task_ids: Optional[Tuple],
                     iteration: int,
                     new_time: float,
-                    support: tensor,
-                    query: tensor,
-                    y_s: tensor,
-                    y_q: tensor) -> None:
+                    support: Tensor,
+                    query: Tensor,
+                    y_s: Tensor,
+                    y_q: Tensor) -> None:
         """
         inputs:
             support : tensor of shape [n_task, s_shot, feature_dim]
@@ -51,6 +52,7 @@ class BDCSPN(FSmethod):
                       'gt': y_q, 'z_s': support, 'z_q': query, 'gt_s': y_s,
                       'weights': self.weights}
 
+            assert task_ids is not None
             for metric_name in metrics:
                 metrics[metric_name].update(task_ids[0],
                                             task_ids[1],
@@ -58,10 +60,10 @@ class BDCSPN(FSmethod):
                                             **kwargs)
 
     def rectify(self,
-                support: tensor,
-                query: tensor,
-                y_s: tensor,
-                y_q: tensor) -> None:
+                support: Tensor,
+                query: Tensor,
+                y_s: Tensor,
+                y_q: Tensor) -> None:
         num_classes = y_s.unique().size(0)
         one_hot_s = get_one_hot(y_s, num_classes)
         eta = support.mean(1, keepdim=True) - query.mean(1, keepdim=True)
@@ -77,11 +79,13 @@ class BDCSPN(FSmethod):
         w_s = (one_hot_s * logits_s) / normalization  # [n_task, shot_s, num_class]
         w_q = (one_hot_q * logits_q) / normalization  # [n_task, shot_q, num_class]
 
-        # assert np.allclose((torch.cat([w_s, w_q], 1).sum(1) - 1.).sum().item(), 0.), (torch.cat([w_s, w_q], 1).sum(1) - 1.).sum()
+        # assert np.allclose((torch.cat([w_s, w_q], 1).sum(1) - 1.).sum().item(), 0.),
+        #                    (torch.cat([w_s, w_q], 1).sum(1) - 1.).sum()
+
         self.weights = ((w_s * one_hot_s).transpose(1, 2).matmul(support) \
                         + (w_q * one_hot_q).transpose(1, 2).matmul(query))
 
-    def get_logits(self, samples: tensor):
+    def get_logits(self, samples: Tensor):
         """
         inputs:
             samples : tensor of shape [n_task, shot, feature_dim]
@@ -99,12 +103,12 @@ class BDCSPN(FSmethod):
 
     def forward(self,
                 model: torch.nn.Module,
-                support: tensor,
-                query: tensor,
-                y_s: tensor,
-                y_q: tensor,
+                support: Tensor,
+                query: Tensor,
+                y_s: Tensor,
+                y_q: Tensor,
                 metrics: Dict[str, Metric] = None,
-                task_ids: Tuple[int, int] = None):
+                task_ids: Tuple[int, int] = None) -> Tuple[Optional[Tensor], Tensor]:
         """
         Corresponds to the TIM-GD inference
         inputs:
@@ -136,17 +140,19 @@ class BDCSPN(FSmethod):
         self.record_info(iteration=0,
                          task_ids=task_ids,
                          metrics=metrics,
-                         new_time=time.time()-t0,
+                         new_time=time.time() - t0,
                          support=feat_s,
                          query=feat_q,
                          y_s=y_s,
                          y_q=y_q)
+
         self.rectify(support=feat_s, y_s=y_s,
                      query=feat_q, y_q=y_q)
+
         self.record_info(iteration=1,
                          task_ids=task_ids,
                          metrics=metrics,
-                         new_time=time.time()-t0,
+                         new_time=time.time() - t0,
                          support=feat_s,
                          query=feat_q,
                          y_s=y_s,
