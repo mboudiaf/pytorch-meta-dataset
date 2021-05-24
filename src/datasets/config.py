@@ -1,4 +1,5 @@
 import argparse
+from typing import List
 
 
 class DataConfig(object):
@@ -117,6 +118,9 @@ class EpisodeDescriptionConfig(object):
         self.ignore_hierarchy_probability = args.ignore_hierarchy_probability
         self.min_examples_in_class = args.min_examples_in_class
         self.num_unique_descriptions = args.num_unique_descriptions
+
+        self.use_dag_ontology_list: List[bool]
+        self.use_bilevel_ontology_list: List[bool]
 
     def max_ways(self):
         """Returns the way (maximum way if variable) of the episode."""
