@@ -1,6 +1,8 @@
-scripts/
 conversion/
+**/make_records/
+**/make_splits/
 checkpoints/
+**/beluga/
 results/
 deploy/
 # Sublime files
