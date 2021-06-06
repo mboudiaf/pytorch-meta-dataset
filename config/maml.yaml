@@ -12,5 +12,5 @@ METHOD:
   iter: 10
   step_size: 0.4
   first_order: True
-  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'step_size', 'iter']
+  hyperparams: ['method', 'arch', 'base_source', 'test_source', 'step_size', 'iter']
   eval_metrics: ['Acc']

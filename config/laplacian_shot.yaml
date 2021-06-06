@@ -8,5 +8,5 @@ METHOD:
   center_features: False
   merge_support: False
   iter: 20
-  hyperparams: ['method', 'base_sources', 'test_sources', 'arch', 'knn', 'lmd', 'proto_rect']
+  hyperparams: ['method', 'base_source', 'test_source', 'arch', 'knn', 'lmd', 'proto_rect']
   eval_metrics: ['Acc', 'LaplacianEnergy']

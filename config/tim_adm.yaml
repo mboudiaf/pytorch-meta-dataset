@@ -8,4 +8,4 @@ METHOD:
   temp: 15
   loss_weights: [0.5, 10., 0.]  # [Xent, H(Y), H(Y|X)]
   eval_metrics: ['Acc', 'MI', 'CondEnt', 'MargEnt', 'XEnt']
-  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'loss_weights']
+  hyperparams: ['method', 'arch', 'base_source', 'test_source', 'loss_weights']

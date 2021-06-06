@@ -1,4 +1,4 @@
-from argspace import Namespace
+from argparse import Namespace
 from typing import Optional
 
 import torch.optim

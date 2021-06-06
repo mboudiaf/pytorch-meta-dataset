@@ -1,6 +1,4 @@
 import os
-import json
-import shutil
 import random
 import argparse
 from pathlib import Path
@@ -23,7 +21,7 @@ from .models.meta.metamodules.module import MetaModule
 from .utils import make_episode_visualization, plot_metrics
 from .utils import (compute_confidence_interval, load_checkpoint, get_model_dir,
                     load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
-                    setup, cleanup)
+                    setup, cleanup, copy_config)
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,31 +33,13 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     assert args.base_config is not None
 
-    cfg = load_cfg_from_cfg_file(args.base_config)
-    cfg.update(load_cfg_from_cfg_file(args.method_config))
+    cfg = load_cfg_from_cfg_file(Path(args.base_config))
+    cfg.update(load_cfg_from_cfg_file(Path(args.method_config)))
 
     if args.opts is not None:
         cfg = merge_cfg_from_list(cfg, args.opts)
 
     return cfg
-
-
-def copy_config(args, exp_root: Path) -> None:
-    # ========== Copy source code ==========
-    p = Path(".")
-    python_files = list(p.glob('**/*.py'))
-    filtered_list = [file
-                     for file in python_files
-                     if 'checkpoints' not in str(file) and 'results' not in str(file)]
-
-    for file in filtered_list:
-        file_dest = exp_root / 'code_snapshot' / file
-        file_dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(file, file_dest)
-
-    # ========== Copy yaml files ==========
-    with open(exp_root / 'config.json', 'w') as fp:
-        json.dump(args, fp, indent=4)
 
 
 def hash_config(args: argparse.Namespace) -> str:
@@ -118,7 +98,7 @@ def main_worker(rank: int,
     current_split = "TEST" if args.eval_mode == 'test' else "VALID"
 
     _, num_classes_base = get_dataloader(args=args,
-                                         sources=args.base_sources,
+                                         source=args.base_source,
                                          batch_size=args.batch_size,
                                          world_size=world_size,
                                          split=Split["TRAIN"],
@@ -126,15 +106,15 @@ def main_worker(rank: int,
                                          version=args.loader_version)
 
     test_loader, num_classes_test = get_dataloader(args=args,
-                                                   sources=args.test_sources,
+                                                   source=args.test_source,
                                                    batch_size=args.val_batch_size,
                                                    world_size=world_size,
                                                    split=Split[current_split],
                                                    episodic=True,
                                                    version=args.loader_version)
 
-    print(f"BASE datasets: {args.base_sources} ({num_classes_base} classes)")
-    print(f"{current_split} datasets: {args.test_sources} ({num_classes_test} classes)")
+    print(f"BASE dataset: {args.base_source} ({num_classes_base} classes)")
+    print(f"{current_split} dataset: {args.test_source} ({num_classes_test} classes)")
 
     # ===============> Load model <=================
     # ==============================================
@@ -188,12 +168,12 @@ def main_worker(rank: int,
 
         # ======> Plot inference metrics <=======
         if i % args.plot_freq == 0 and args.eval_mode == 'test' and args.iter > 1:
-            path = os.path.join(exp_root, f"{str(args.base_sources)}->{str(args.test_sources)}.pdf")
+            path = os.path.join(exp_root, f"{str(args.base_source)}->{str(args.test_source)}.pdf")
             plot_metrics(metrics, path, task_ids[1], args)
 
         # =======> Visualize a randomly chosen episode <==========
         if args.visu and i % args.visu_freq == 0 and args.eval_mode == 'test':
-            visu_path = os.path.join(exp_root, 'episode_samples', args.loader)
+            visu_path = os.path.join(exp_root, 'episode_samples', args.loader_version)
             os.makedirs(visu_path, exist_ok=True)
             path = os.path.join(visu_path, f'visu_{i}.png')
             make_episode_visualization(args,

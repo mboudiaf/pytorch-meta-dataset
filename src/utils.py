@@ -3,6 +3,7 @@ import copy
 import pickle
 import shutil
 import argparse
+import json
 from os import environ
 from pathlib import Path
 from ast import literal_eval
@@ -289,8 +290,8 @@ def get_model_dir(args: argparse.Namespace) -> Path:
     model_type = args.method if args.episodic_training else 'standard'
 
     return Path(args.ckpt_path,
-                f'base={str(args.base_sources)}',
-                f'val={str(args.val_sources)}',
+                f'base={args.base_source}',
+                f'val={args.val_source}',
                 f'arch={args.arch}',
                 f'method={model_type}')
 
@@ -299,7 +300,7 @@ def get_logs_path(model_path: Path, method: str, shot: int) -> Path:
     exp_path: str = '_'.join(str(model_path).split('/')[1:])
 
     file_path: Path = Path('tmp') / exp_path / method
-    file_path.mkdir(parents=False, exist_ok=True)
+    file_path.mkdir(parents=True, exist_ok=True)
 
     return file_path / f'{shot}.txt'
 
@@ -370,7 +371,23 @@ def load_checkpoint(model, model_path, type='best') -> None:
     model.load_state_dict(state_dict)
 
 
-def compute_confidence_interval(data: np.ndarray, axis=0) -> Tuple[np.ndarray, np.ndarray]:
+def copy_config(args: argparse.Namespace, exp_root: Path, code_root: Path = Path("src/")):
+    # ========== Copy source code ==========
+    python_files = list(code_root.glob('**/*.py'))
+    filtered_list = [file
+                     for file in python_files
+                     if 'checkpoints' not in str(file) and 'results' not in str(file)]
+    for file in filtered_list:
+        file_dest = exp_root / 'src_code' / file
+        file_dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(file, file_dest)
+
+    # ========== Copy yaml files ==========
+    with open(exp_root / 'config.json', 'w') as fp:
+        json.dump(args, fp, indent=4)
+
+
+def compute_confidence_interval(data: Union[np.ndarray, torch.Tensor], axis=0) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute 95% confidence interval
     :param data: An array of mean accuracy (or mAP) across a number of sampled episodes.
@@ -378,12 +395,9 @@ def compute_confidence_interval(data: np.ndarray, axis=0) -> Tuple[np.ndarray, n
     """
     # a = 1.0 * np.array(data)
     # a = data.astype(np.float64)
-    a = data[...]
-
+    a = data if type(data) == np.ndarray else data.numpy()
     m = np.mean(a, axis=axis)
     std = np.std(a, axis=axis)
-    assert m.dtype == np.float64, m.dtype
-    assert std.dtype == np.float64, std.dtype
 
     pm = 1.96 * (std / np.sqrt(a.shape[axis]))
 
@@ -499,8 +513,7 @@ def _check_and_coerce_cfg_value_type(replacement, original, key, full_key):
 
 def load_cfg_from_cfg_file(file: Path):
     cfg = {}
-
-    assert file.stem == '.yaml', f"{file} is not a yaml file"
+    assert file.suffix == '.yaml', f"{file} is not a yaml file"
 
     with open(file, 'r') as f:
         cfg_from_file = yaml.safe_load(f)

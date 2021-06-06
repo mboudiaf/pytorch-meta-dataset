@@ -6,16 +6,15 @@ data=$3
 base_config_path="config/base.yaml"
 method_config_path="config/${method}.yaml"
 
-base_sources="['${data}']"
-val_sources="['${data}']"
+base_source=${data}
+val_source=${data}
+test_source=${data}
 # ===============> Mini <===================
 
 python -m src.train --base_config config/base.yaml \
                     --method_config ${method_config_path} \
                     --opts arch ${arch} \
-                           base_sources ${base_sources} \
-                           val_sources ${val_sources} \
-
-
-python -m src.train --base_config config/base.yaml --method_config config/simpleshot.yaml --opts arch resnet18
-
+                           base_source ${base_source} \
+                           val_source ${val_source} \
+                           test_source ${test_source} \
+                           debug True

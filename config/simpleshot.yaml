@@ -2,4 +2,4 @@ METHOD:
   method: 'SimpleShot'
   episodic_training: False
   eval_metrics: ['Acc']
-  hyperparams: ['method', 'arch', 'base_sources', 'test_sources']
+  hyperparams: ['method', 'arch', 'base_source', 'test_source']

@@ -7,4 +7,4 @@ METHOD:
   temp: 1
   finetune_all_layers: False
   eval_metrics: ['Acc', 'XEnt']
-  hyperparams: ['method', 'arch', 'base_sources', 'test_sources', 'finetune_all_layers']
+  hyperparams: ['method', 'arch', 'base_source', 'test_source', 'finetune_all_layers']

@@ -1,5 +1,5 @@
 import argparse
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 from collections import OrderedDict
 
 import torch

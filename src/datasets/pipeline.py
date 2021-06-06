@@ -166,7 +166,7 @@ class EpisodicDataset(torch.utils.data.IterableDataset):
     def get_next(self, class_id):
         try:
             sample_dic = next(self.class_datasets[class_id])
-        except StopIteration:
+        except (StopIteration, TypeError) as e:
             self.class_datasets[class_id] = cycle_(self.class_datasets[class_id])
             sample_dic = next(self.class_datasets[class_id])
         return sample_dic
@@ -194,7 +194,7 @@ class BatchDataset(torch.utils.data.IterableDataset):
     def get_next(self, class_id):
         try:
             sample_dic = next(self.class_datasets[class_id])
-        except StopIteration:
+        except (StopIteration, TypeError) as e:
             self.class_datasets[class_id] = cycle_(self.class_datasets[class_id])
             sample_dic = next(self.class_datasets[class_id])
 
@@ -217,7 +217,7 @@ class ZipDataset(torch.utils.data.IterableDataset):
     def get_next(self, source_id):
         try:
             dataset = next(self.dataset_list[source_id])
-        except StopIteration:
+        except (StopIteration, TypeError) as e:
             self.dataset_list[source_id] = iter(self.dataset_list[source_id])
             dataset = next(self.dataset_list[source_id])
 

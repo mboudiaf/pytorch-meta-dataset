@@ -15,7 +15,7 @@ import torch.backends.cudnn as cudnn
 from tqdm import tqdm
 from torch import tensor, Tensor
 from torch.nn.parallel import DistributedDataParallel as DDP
-
+from pathlib import Path
 from .losses import __losses__
 from .methods import FSmethod
 from .methods import __dict__ as all_methods
@@ -26,7 +26,7 @@ from .models.ingredient import get_model
 from .models.meta.metamodules.module import MetaModule
 from .utils import (AverageMeter, save_checkpoint, get_model_dir,
                     load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
-                    setup, cleanup, main_process)
+                    setup, cleanup, main_process, copy_config)
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,8 +38,8 @@ def parse_args() -> argparse.Namespace:
 
     assert args.base_config is not None
 
-    cfg = load_cfg_from_cfg_file(args.base_config)
-    cfg.update(load_cfg_from_cfg_file(args.method_config))
+    cfg = load_cfg_from_cfg_file(Path(args.base_config))
+    cfg.update(load_cfg_from_cfg_file(Path(args.method_config)))
 
     if args.opts is not None:
         cfg = merge_cfg_from_list(cfg, args.opts)
@@ -103,7 +103,7 @@ def main_worker(rank: int,
 
     # ============ Define loaders ================
     train_loader, num_classes = get_dataloader(args=args,
-                                               sources=args.val_sources,
+                                               source=args.base_source,
                                                batch_size=args.batch_size,
                                                world_size=world_size,
                                                split=Split["TRAIN"],
@@ -111,7 +111,7 @@ def main_worker(rank: int,
                                                version=args.loader_version)
 
     val_loader, _ = get_dataloader(args=args,
-                                   sources=args.val_sources,
+                                   source=args.val_source,
                                    batch_size=args.val_batch_size,
                                    world_size=world_size,
                                    split=Split["VALID"],
@@ -132,6 +132,7 @@ def main_worker(rank: int,
         print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
     model_dir = get_model_dir(args)
+    copy_config(args, model_dir)
 
     # ============ Define metrics ================
     batch_time = AverageMeter()
@@ -201,7 +202,6 @@ def main_worker(rank: int,
             batch_time.update(time.time() - t0, i == 0)
             t0 = time.time()
 
-        # train_loss = losses.avg
 
         # ============ Validation ============
         if i % args.eval_freq == 0:
@@ -239,6 +239,7 @@ def main_worker(rank: int,
                    i, args.num_updates, batch_time=batch_time,  # noqa: E121
                    loss=losses, top1=top1))
 
+            train_loss = losses.avg
             for k in metrics:
                 if 'train' in k:
                     metrics[k][int(i / args.print_freq)] = eval(k)
@@ -249,7 +250,9 @@ def main_worker(rank: int,
 if __name__ == "__main__":
     args = parse_args()
     # os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in args.gpus)
-
+    if args.debug:
+        args.batch_size = 16
+        args.val_episodes = 10
     world_size = len(args.gpus)
     distributed = world_size > 1
     args.world_size = world_size

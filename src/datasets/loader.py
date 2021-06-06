@@ -14,44 +14,39 @@ from .pipeline import worker_init_fn_
 from . import config as config_lib
 
 
-
 def get_dataspecs(args: argparse.Namespace,
-                  sources: List[str]):
+                  source: str):
     # Recovering data
     data_config = config_lib.DataConfig(args=args)
     episod_config = config_lib.EpisodeDescriptionConfig(args=args)
 
-    use_bilevel_ontology_list = [False] * len(sources)
-    use_dag_ontology_list = [False] * len(sources)
-    if episod_config.num_ways:
-        if len(sources) > 1:
-            raise ValueError('For fixed episodes, not tested yet on > 1 dataset')
-    else:
-        # Enable ontology aware sampling for Omniglot and ImageNet.
-        if 'omniglot' in sources:
-            use_bilevel_ontology_list[sources.index('omniglot')] = True
-        if 'ilsvrc_2012' in sources:
-            use_dag_ontology_list[sources.index('ilsvrc_2012')] = True
+    use_bilevel_ontology_list = [False]
+    use_dag_ontology_list = [False]
+    # Enable ontology aware sampling for Omniglot and ImageNet.
+    if source == 'omniglot':
+        # use_bilevel_ontology_list[sources.index('omniglot')] = True
+        use_bilevel_ontology_list = [True]
+    if source == 'ilsvrc_2012':
+        use_dag_ontology_list = [True]
 
     episod_config.use_bilevel_ontology_list = use_bilevel_ontology_list
     episod_config.use_dag_ontology_list = use_dag_ontology_list
 
     all_dataset_specs = []
-    for dataset_name in sources:
-        dataset_records_path = os.path.join(data_config.path, dataset_name)
-        dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
-        all_dataset_specs.append(dataset_spec)
+    dataset_records_path = os.path.join(data_config.path, source)
+    dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
+    all_dataset_specs = [dataset_spec]
     return all_dataset_specs, data_config, episod_config
 
 
 def get_dataloader(args: argparse.Namespace,
-                   sources: argparse.Namespace,
+                   source: str,
                    batch_size: int,
                    split: Split,
                    world_size: int,
                    version: str,
                    episodic: bool):
-    all_dataset_specs, data_config, episod_config = get_dataspecs(args, sources)
+    all_dataset_specs, data_config, episod_config = get_dataspecs(args, source)
     num_classes = sum([len(d_spec.get_classes(split=split)) for d_spec in all_dataset_specs])
 
     if version == 'pytorch':

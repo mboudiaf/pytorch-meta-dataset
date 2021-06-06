@@ -8,6 +8,7 @@ TRAINING:
     eval_freq: 500
     loss: 'xent'
     focal_gamma: 3
+    debug: False
 
 AUGMENTATIONS:
     beta: 1.0
@@ -30,11 +31,11 @@ OPTIM:
 DATA:
      # Data config
     image_size: 84
-    base_sources: ['ilsvrc_2012']
-    val_sources: ['ilsvrc_2012']
-    test_sources: ['ilsvrc_2012']
+    base_source: 'ilsvrc_2012'
+    val_source: 'ilsvrc_2012'
+    test_source: 'ilsvrc_2012'
     batch_size: 256
-    path: '/ssd/dataset/natural/converted'
+    path: '/home/malik/dataset/natural/converted'
     split: 'train'
     num_workers: 4
     train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']

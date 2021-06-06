@@ -11,5 +11,5 @@ MODEL:
 METHOD:
   method: 'ProtoNet'
   episodic_training: True
-  hyperparams: ['method', 'arch', 'base_sources', 'test_sources']
+  hyperparams: ['method', 'arch', 'base_source', 'test_source']
   eval_metrics: ['Acc']
