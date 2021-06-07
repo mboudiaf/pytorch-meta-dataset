@@ -7,7 +7,7 @@ import json
 from os import environ
 from pathlib import Path
 from ast import literal_eval
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple, Union, cast
 
 import torch
 import numpy as np
@@ -395,7 +395,11 @@ def compute_confidence_interval(data: Union[np.ndarray, torch.Tensor], axis=0) -
     """
     # a = 1.0 * np.array(data)
     # a = data.astype(np.float64)
-    a = data if type(data) == np.ndarray else data.numpy()
+
+    # Casting is a pure mypy operation (no real impact), but its better to
+    # explicit what is going on
+    a: np.ndarray = (cast(np.ndarray, data) if type(data) == np.ndarray
+                     else cast(Tensor, data).numpy())
     m = np.mean(a, axis=axis)
     std = np.std(a, axis=axis)
 
