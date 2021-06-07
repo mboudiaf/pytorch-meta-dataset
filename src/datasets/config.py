@@ -1,5 +1,6 @@
 import argparse
-from typing import List
+from typing import Tuple
+from pathlib import Path
 
 
 class DataConfig(object):
@@ -10,16 +11,16 @@ class DataConfig(object):
         """
 
         # General info
-        self.path = args.path
-        self.batch_size = args.batch_size
-        self.val_batch_size = args.val_batch_size
-        self.num_workers = args.num_workers
-        self.shuffle = args.shuffle
+        self.path: Path = Path(args.path)
+        self.batch_size: int = args.batch_size
+        self.val_batch_size: int = args.val_batch_size
+        self.num_workers: int = args.num_workers
+        self.shuffle: bool = args.shuffle
 
         # Transforms and augmentations
-        self.image_size = args.image_size
-        self.test_transforms = args.test_transforms
-        self.train_transforms = args.train_transforms
+        self.image_size: Tuple[int, int] = args.image_size
+        self.test_transforms: bool = args.test_transforms
+        self.train_transforms: bool = args.train_transforms
 
 
 class EpisodeDescriptionConfig(object):
@@ -103,25 +104,25 @@ class EpisodeDescriptionConfig(object):
                     'Please ensure the following arguments of EpisodeDescriptionConfig are set: '
                     '%s' % (none_arg_names, first_arg_name, none_arg_names))
 
-        self.num_ways = args.num_ways if args.num_ways > 0 else None
-        self.num_support = args.num_support if args.num_support > 0 else None
-        self.num_query = args.num_query if args.num_query > 0 else None
-        self.min_ways = args.min_ways
-        self.max_ways_upper_bound = args.max_ways_upper_bound
-        self.max_num_query = args.max_num_query
-        self.max_support_set_size = args.max_support_set_size
-        self.max_support_size_contrib_per_class = args.max_support_size_contrib_per_class
-        self.min_log_weight = args.min_log_weight
-        self.max_log_weight = args.max_log_weight
-        self.ignore_dag_ontology = args.ignore_dag_ontology
-        self.ignore_bilevel_ontology = args.ignore_bilevel_ontology
-        self.ignore_hierarchy_probability = args.ignore_hierarchy_probability
-        self.min_examples_in_class = args.min_examples_in_class
-        self.num_unique_descriptions = args.num_unique_descriptions
+        self.num_ways: int = args.num_ways if args.num_ways > 0 else None
+        self.num_support: int = args.num_support if args.num_support > 0 else None
+        self.num_query: int = args.num_query if args.num_query > 0 else None
+        self.min_ways: int = args.min_ways
+        self.max_ways_upper_bound: int = args.max_ways_upper_bound
+        self.max_num_query: int = args.max_num_query
+        self.max_support_set_size: int = args.max_support_set_size
+        self.max_support_size_contrib_per_class: int = args.max_support_size_contrib_per_class
+        self.min_log_weight: float = args.min_log_weight
+        self.max_log_weight: float = args.max_log_weight
+        self.ignore_dag_ontology: bool = args.ignore_dag_ontology
+        self.ignore_bilevel_ontology: bool = args.ignore_bilevel_ontology
+        self.ignore_hierarchy_probability: bool = args.ignore_hierarchy_probability
+        self.min_examples_in_class: int = args.min_examples_in_class
+        self.num_unique_descriptions: int = args.num_unique_descriptions
 
-        self.use_dag_ontology_list: List[bool]
-        self.use_bilevel_ontology_list: List[bool]
+        self.use_dag_ontology: bool
+        self.use_bilevel_ontology: bool
 
-    def max_ways(self):
+    def max_ways(self) -> int:
         """Returns the way (maximum way if variable) of the episode."""
         return self.num_ways or self.max_ways_upper_bound

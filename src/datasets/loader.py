@@ -1,5 +1,5 @@
-import os
 import argparse
+from pathlib import Path
 from functools import partial
 from typing import Any, Callable, Iterable, Tuple, Union, cast
 
@@ -20,28 +20,29 @@ DL = Union[DataLoader,
 
 
 def get_dataspecs(args: argparse.Namespace,
-                  source: str):
+                  source: str) -> Tuple[Any, Any, Any]:
     # Recovering data
     data_config = config_lib.DataConfig(args=args)
     episod_config = config_lib.EpisodeDescriptionConfig(args=args)
 
-    use_bilevel_ontology_list = [False]
-    use_dag_ontology_list = [False]
+    use_bilevel_ontology = False
+    use_dag_ontology = False
+
     # Enable ontology aware sampling for Omniglot and ImageNet.
     if source == 'omniglot':
         # use_bilevel_ontology_list[sources.index('omniglot')] = True
-        use_bilevel_ontology_list = [True]
+        use_bilevel_ontology = True
     if source == 'ilsvrc_2012':
-        use_dag_ontology_list = [True]
+        use_dag_ontology = True
 
-    episod_config.use_bilevel_ontology_list = use_bilevel_ontology_list
-    episod_config.use_dag_ontology_list = use_dag_ontology_list
+    episod_config.use_bilevel_ontology = use_bilevel_ontology
+    episod_config.use_dag_ontology = use_dag_ontology
 
-    all_dataset_specs = []
-    dataset_records_path = os.path.join(data_config.path, source)
-    dataset_spec = dataset_spec_lib.load_dataset_spec(dataset_records_path)
-    all_dataset_specs = [dataset_spec]
-    return all_dataset_specs, data_config, episod_config
+    dataset_records_path: Path = data_config.path / source
+    # Original codes handles paths as strings:
+    dataset_spec = dataset_spec_lib.load_dataset_spec(str(dataset_records_path))
+
+    return dataset_spec, data_config, episod_config
 
 
 def get_dataloader(args: argparse.Namespace,
