@@ -52,15 +52,15 @@ def get_dataloader(args: argparse.Namespace,
                    world_size: int,
                    version: str,
                    episodic: bool):
-    all_dataset_specs, data_config, episod_config = get_dataspecs(args, source)
-    num_classes = sum([len(d_spec.get_classes(split=split)) for d_spec in all_dataset_specs])
+    dataset_spec, data_config, episod_config = get_dataspecs(args, source)
+    num_classes = len(dataset_spec.get_classes(split=split))
 
     pipeline_fn: Callable[..., Dataset]
     data_loader: DL
     if version == 'pytorch':
         pipeline_fn = cast(Callable[..., Dataset], (torch_pipeline.make_episode_pipeline if episodic
                                                     else torch_pipeline.make_batch_pipeline))
-        dataset: Dataset = pipeline_fn(dataset_spec_list=all_dataset_specs,
+        dataset: Dataset = pipeline_fn(dataset_spec=dataset_spec,
                                        data_config=data_config,
                                        split=split,
                                        episode_descr_config=episod_config)
@@ -84,9 +84,9 @@ def get_dataloader(args: argparse.Namespace,
         gin.parse_config_file(GIN_FILE_PATH)
 
         tf_dataset: Any = tf_pipeline_fn(
-            dataset_spec=all_dataset_specs[0],
-            use_dag_ontology=episod_config.use_dag_ontology_list[0],
-            use_bilevel_ontology=episod_config.use_bilevel_ontology_list[0],
+            dataset_spec=dataset_spec,
+            use_dag_ontology=episod_config.use_dag_ontology,
+            use_bilevel_ontology=episod_config.use_bilevel_ontology,
             episode_descr_config=episod_config,
             split=split,
             batch_size=int(batch_size / world_size),

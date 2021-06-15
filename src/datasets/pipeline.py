@@ -187,7 +187,7 @@ def contains_duplicates(X):
     return len(np.unique(X)) != len(X)
 
 
-def make_episode_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
+def make_episode_pipeline(dataset_spec: Union[HDS, BDS, DS],
                           split: Split,
                           episode_descr_config: EpisodeDescriptionConfig,
                           data_config: DataConfig,
@@ -196,7 +196,7 @@ def make_episode_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
     """Returns a pipeline emitting data from potentially multiples source as Episodes.
 
     Args:
-      dataset_spec_list: A list of DatasetSpecification object defining what to read from.
+      dataset_spec: A list of DatasetSpecification object defining what to read from.
       split: A learning_spec.Split object identifying the source (meta-)split.
       episode_descr_config: An instance of EpisodeDescriptionConfig containing
         parameters relating to sampling shots and ways for episodes.
@@ -209,60 +209,57 @@ def make_episode_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
 
     episodic_dataset_list = []
     offset = 0
-    for i in range(len(dataset_spec_list)):
-        episode_reader = reader.Reader(dataset_spec=dataset_spec_list[i],
-                                       split=split,
-                                       shuffle=data_config.shuffle,
-                                       offset=offset)
+    episode_reader = reader.Reader(dataset_spec=dataset_spec,
+                                   split=split,
+                                   shuffle=data_config.shuffle,
+                                   offset=offset)
 
-        class_datasets = episode_reader.construct_class_datasets()
-        sampler = sampling.EpisodeDescriptionSampler(
-            dataset_spec=episode_reader.dataset_spec,
-            split=split,
-            episode_descr_config=episode_descr_config,
-            use_dag_hierarchy=episode_descr_config.use_dag_ontology_list[i],
-            use_bilevel_hierarchy=episode_descr_config.use_bilevel_ontology_list[i],
-            ignore_hierarchy_probability=ignore_hierarchy_probability)
+    class_datasets = episode_reader.construct_class_datasets()
+    sampler = sampling.EpisodeDescriptionSampler(
+        dataset_spec=episode_reader.dataset_spec,
+        split=split,
+        episode_descr_config=episode_descr_config,
+        use_dag_hierarchy=episode_descr_config.use_dag_ontology,
+        use_bilevel_hierarchy=episode_descr_config.use_bilevel_ontology,
+        ignore_hierarchy_probability=ignore_hierarchy_probability)
 
-        transforms = get_transforms(data_config, split)
+    transforms = get_transforms(data_config, split)
 
-        _, max_support_size, max_query_size = sampler.compute_chunk_sizes()
-        episodic_dataset_list.append(EpisodicDataset(class_datasets=class_datasets,
-                                                     sampler=sampler,
-                                                     max_support_size=max_support_size,
-                                                     max_query_size=max_query_size,
-                                                     transforms=transforms))
-        offset += len(class_datasets)
+    _, max_support_size, max_query_size = sampler.compute_chunk_sizes()
+    episodic_dataset_list.append(EpisodicDataset(class_datasets=class_datasets,
+                                                 sampler=sampler,
+                                                 max_support_size=max_support_size,
+                                                 max_query_size=max_query_size,
+                                                 transforms=transforms))
+    offset += len(class_datasets)
 
     return ZipDataset(episodic_dataset_list)
 
 
-def make_batch_pipeline(dataset_spec_list: List[Union[HDS, BDS, DS]],
+def make_batch_pipeline(dataset_spec: Union[HDS, BDS, DS],
                         data_config: DataConfig,
                         split: Split,
                         **kwargs) -> Dataset:
     """Returns a pipeline emitting data from potentially multiples source as batches.
 
     Args:
-      dataset_spec_list: A list of DatasetSpecification object defining what to read from.
+      dataset_spec: A list of DatasetSpecification object defining what to read from.
       split: A learning_spec.Split object identifying the source (meta-)split.
     Returns:
     """
 
     offset = 0
     dataset_list: List[BatchDataset] = []
-    for dataset_spec in dataset_spec_list:
-        batch_reader = reader.Reader(dataset_spec=dataset_spec,
-                                     split=split,
-                                     shuffle=data_config.shuffle,
-                                     offset=offset)
+    batch_reader = reader.Reader(dataset_spec=dataset_spec,
+                                 split=split,
+                                 shuffle=data_config.shuffle,
+                                 offset=offset)
 
-        class_datasets = batch_reader.construct_class_datasets()
+    class_datasets = batch_reader.construct_class_datasets()
 
-        transforms = get_transforms(data_config=data_config, split=split)
-        dataset = BatchDataset(class_datasets=class_datasets,
-                               transforms=transforms)
-        dataset_list.append(dataset)
-        offset += len(class_datasets)
+    transforms = get_transforms(data_config=data_config, split=split)
+    dataset = BatchDataset(class_datasets=class_datasets,
+                           transforms=transforms)
+    dataset_list.append(dataset)
 
     return ZipDataset(dataset_list)
