@@ -202,7 +202,6 @@ def main_worker(rank: int,
             batch_time.update(time.time() - t0, i == 0)
             t0 = time.time()
 
-
         # ============ Validation ============
         if i % args.eval_freq == 0:
             val_acc, n_episodes = eval_fn()

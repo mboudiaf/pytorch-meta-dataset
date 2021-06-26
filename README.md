@@ -1,4 +1,4 @@
-# PyTorch META-DATASET
+# PyTorch META-DATASET (Few-shot classification benchmark)
 
 This repo contains a PyTorch implementation of [meta-dataset](https://github.com/google-research/meta-dataset) and a unified implementation of some few-shot methods. This repo may be useful to you if you:
 
@@ -6,11 +6,11 @@ This repo contains a PyTorch implementation of [meta-dataset](https://github.com
 - want to benchmark your method on META-DATASET (but do not want to mix your PyTorch code with the original TensorFlow implementation);
 - are looking for a codebase to visualize few-shot episodes.
 
-**Benefits**:
+**Benefits over original code**:
 
-1. contrary to original TF code, this repo can be properly seeded, allowing to repeat the same random series of episodes if needed;
-2. contrary to the original repo, this code shuffles data without the need to use a buffer, hence reducing the memory consumption;
-3. better results can be obtained using this repo thanks to an enhanced way of resizing images. More details in the paper.
+1. This repo can be properly seeded, allowing to repeat the same random series of episodes if needed;
+2. Data shuffling is performed without using a buffer, hence reducing the memory consumption;
+3. Better results can be obtained using this repo thanks to an enhanced way of resizing images. More details in the paper.
 
 Note that **this code also includes the original implementation** for comparison (using the PyTorch workaround proposed by the authors). If you wish to use the original implementation, set the option `loader_version: 'tf'` in [`base.yaml`](config/base.yaml#L44) (by default set to `pytorch`).
 
@@ -150,13 +150,15 @@ Contributions are more than welcome. In particular, if you want to add methods/p
 
 ## 5. Citation
 
-If you find this repo useful in your research, please consider citing the following paper:
+If you find this repo useful for your research, please consider citing the following papers:
 ```bibtex
-@article{boudiaf2020unifying,
-  title={Mutual-Information Based Few-Shot Classification},
-  author={Boudiaf, Malik and Ziko, Imtiaz Masud and Rony, J{\'e}r{\^o}me and Dolz, Jose and Ben Ayed, Ismail and Piantanida, Pablo},
-  journal={arXiv preprint arXiv:YYMM.NNNN},
-  year={2021}
+@misc{boudiaf2021mutualinformation,
+      title={Mutual-Information Based Few-Shot Classification}, 
+      author={Malik Boudiaf and Ziko Imtiaz Masud and Jérôme Rony and Jose Dolz and Ismail Ben Ayed and Pablo Piantanida},
+      year={2021},
+      eprint={2106.12252},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 Additionally, do not hesitate to file issues if you encounter problems, or reach out directly to Malik Boudiaf (malik.boudiaf.1@etsmtl.net).
@@ -164,4 +166,4 @@ Additionally, do not hesitate to file issues if you encounter problems, or reach
 
 ## 6. Acknowledgments
 
-I thank the authors of [meta-dataset](https://github.com/google-research/meta-dataset) for releasing their code and the author of [open-source TFRecord reader](https://github.com/vahidk/tfrecord) for open sourcing an awesome Pytorch-compatible TFRecordReader !
+I thank the authors of [meta-dataset](https://github.com/google-research/meta-dataset) for releasing their code and the author of [open-source TFRecord reader](https://github.com/vahidk/tfrecord) for open sourcing an awesome Pytorch-compatible TFRecordReader ! Also big thanks to @hkervadec for his thorough code review !
