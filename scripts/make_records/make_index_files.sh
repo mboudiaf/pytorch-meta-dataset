@@ -1,5 +1,5 @@
 data_path=$1
-all_sources="ilsvrc_2012 aircraft cu_birds dtd fungi mscoco omniglot quickdraw traffic_sign vgg_flower"
+all_sources="ilsvrc_2012 aircraft cu_birds dtd fungi mscoco omniglot quickdraw traffic_sign vgg_flower" 
 
 for source in ${all_sources}
 do
