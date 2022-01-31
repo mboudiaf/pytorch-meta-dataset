@@ -2,8 +2,9 @@ TRAINING:
   num_ways: 5
   num_support: 5
   num_query: 20
-  val_batch_size: 2
-  batch_size: 2
+  val_batch_size: 1
+  ignore_dag_ontology: True
+  batch_size: 1
 
 MODEL:
   use_fc: False

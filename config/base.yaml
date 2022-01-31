@@ -35,7 +35,7 @@ DATA:
     val_source: 'ilsvrc_2012'
     test_source: 'ilsvrc_2012'
     batch_size: 256
-    path: '/home/malik/dataset/natural/converted'
+    path: '/ssd/dataset/natural/converted'
     split: 'train'
     num_workers: 4
     train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']

@@ -102,13 +102,13 @@ During training, training loss and validation accuracy are recorded and saved as
 
 ***Example 1***:  Plot the metrics of the standard (=non episodic) resnet-18 on ImageNet:
 ```bash
-python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/standard/
+python -m src.plot --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/standard/
 ```
 
 ***Example 2***: Plot the metrics of all Resnet-18 trained on ImageNet
 
 ```bash
-python src/plot.py --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/
+python -m src.plot --folder checkpoints/ilsvrc_2012/ilsvrc_2012/resnet18/
 ```
 <p align="center">
     <img src="github_figures/training_metric.png" width="500" height="500"/>

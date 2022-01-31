@@ -17,4 +17,3 @@ python -m src.train --base_config config/base.yaml \
                            base_source ${base_source} \
                            val_source ${val_source} \
                            test_source ${test_source} \
-                           debug True
