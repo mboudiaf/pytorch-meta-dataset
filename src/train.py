@@ -125,7 +125,7 @@ def main_worker(rank: int,
                                                               num_classes))
     model = get_model(args=args, num_classes=num_classes).to(rank)
     if not isinstance(model, MetaModule) and world_size > 1:
-        model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
+        # model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
         model = DDP(model, device_ids=[rank])
 
     if main_process(args):

@@ -91,7 +91,7 @@ def get_dataloader(args: argparse.Namespace,
             split=split,
             batch_size=int(batch_size / world_size),
             image_size=84,
-            shuffle_buffer_size=1000)
+            shuffle_buffer_size=300)
 
         iterator: Iterable = tf_dataset.make_one_shot_iterator().get_next()
 
