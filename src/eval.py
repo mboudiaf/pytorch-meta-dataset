@@ -10,9 +10,10 @@ import torch.nn as nn
 import torch.multiprocessing as mp
 import torch.backends.cudnn as cudnn
 from tqdm import trange
+from loguru import logger
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from src.datasets.utils import Split
+from .datasets.utils import Split
 from .datasets.loader import get_dataloader
 from .methods import __dict__ as all_methods
 from .metrics import __dict__ as all_metrics
@@ -73,7 +74,7 @@ def main_worker(rank: int,
     returns :
         results : List of the mean accuracy for each number of support shots
     """
-    print(f"==> Running process rank {rank}.")
+    logger.info(f"==> Running process rank {rank}.")
     setup(args.port, rank, world_size)
 
     # ===============> Setup directories for current exp. <=================
@@ -84,8 +85,7 @@ def main_worker(rank: int,
     exp_root = exp_root / str(exp_no)
     copy_config(args, exp_root)
 
-    print(f"==>  Saving all at {exp_root}")
-
+    logger.info(f"==>  Saving all at {exp_root}")
     device = rank
     if args.seed is not None:
         random.seed(args.seed)
@@ -113,8 +113,8 @@ def main_worker(rank: int,
                                                    episodic=True,
                                                    version=args.loader_version)
 
-    print(f"BASE dataset: {args.base_source} ({num_classes_base} classes)")
-    print(f"{current_split} dataset: {args.test_source} ({num_classes_test} classes)")
+    logger.info(f"BASE dataset: {args.base_source} ({num_classes_base} classes)")
+    logger.info(f"{current_split} dataset: {args.test_source} ({num_classes_test} classes)")
 
     # ===============> Load model <=================
     # ==============================================
@@ -125,7 +125,7 @@ def main_worker(rank: int,
         model = DDP(model, device_ids=[rank])
 
     model_path = get_model_dir(args=args)
-    print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
+    logger.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
     load_checkpoint(model=model, model_path=model_path, type=args.model_tag)
     model.eval()
 
@@ -149,7 +149,7 @@ def main_worker(rank: int,
     for i in tqdm_bar:
         # ======> Reload model checkpoint (some methods may modify model) <=======
         support, query, support_labels, query_labels = next(iter_loader)
-        # print(query_labels.size())
+        # logger.info(query_labels.size())
 
         support_labels = support_labels.to(device, non_blocking=True)
         query_labels = query_labels.to(device, non_blocking=True)

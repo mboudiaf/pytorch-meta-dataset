@@ -17,7 +17,7 @@ import torch.distributed as dist
 from torch import Tensor
 from matplotlib.axes import Axes
 from mpl_toolkits.axes_grid1 import ImageGrid
-
+from loguru import logger
 plt.style.use('ggplot')
 
 
@@ -73,16 +73,16 @@ def make_episode_visualization(args: argparse.Namespace,
                                                       Query's resolution is {img_q.shape[-3:-1]}"
 
     if img_s.min() < 0:
-        print(f"Support images between {img_s.min()} and {img_s.max()} -> Renormalizing")
+        logger.info(f"Support images between {img_s.min()} and {img_s.max()} -> Renormalizing")
         img_s *= std
         img_s += mean
-        print(f"Post normalization : {img_s.min()} and {img_s.max()}")
+        logger.info(f"Post normalization : {img_s.min()} and {img_s.max()}")
 
     if img_q.min() < 0:
-        print(f"Query images between {img_q.min()} and {img_q.max()} -> Renormalizing")
+        logger.info(f"Query images between {img_q.min()} and {img_q.max()} -> Renormalizing")
         img_q *= std
         img_q += mean
-        print(f"Post normalization : {img_q.min()} and {img_q.max()}")
+        logger.info(f"Post normalization : {img_q.min()} and {img_q.max()}")
 
     Kq, num_classes = preds.shape
 
@@ -118,7 +118,7 @@ def make_episode_visualization(args: argparse.Namespace,
             ax = grid[n_columns * i + j]
             if i < len(samples_s[j]):
                 img = samples_s[j][i]
-                # print(img.min(), img.max())
+                # logger.info(img.min(), img.max())
                 # assert img.min() >= 0. and img.max() <= 1.0, (img.min(), img.max())
                 make_plot(ax, img)
 
@@ -135,7 +135,7 @@ def make_episode_visualization(args: argparse.Namespace,
             ax = grid[n_columns * i + j]
             if i - max_s < len(samples_q[j]):
                 img = samples_q[j][i - max_s]
-                # print(img.min(), img.max())
+                # logger.info(img.min(), img.max())
                 # assert img.min() >= 0. and img.max() <= 1.0, (img.min(), img.max())
 
                 make_plot(ax, img, preds_q[j][i - max_s], j, n_columns)
@@ -160,7 +160,7 @@ def make_episode_visualization(args: argparse.Namespace,
 
     fig.savefig(save_path)
     fig.clf()
-    print(f"Figure saved at {save_path}")
+    logger.info(f"Figure saved at {save_path}")
 
 
 def frame_image(img: np.ndarray, color: list, frame_width: int = 3) -> np.ndarray:
@@ -356,10 +356,10 @@ def save_checkpoint(state: Any,
 def load_checkpoint(model, model_path, type='best') -> None:
     if type == 'best':
         checkpoint = torch.load('{}/model_best.pth.tar'.format(model_path))
-        print(f'Loaded model from {model_path}/model_best.pth.tar')
+        logger.info(f'Loaded model from {model_path}/model_best.pth.tar')
     elif type == 'last':
         checkpoint = torch.load('{}/checkpoint.pth.tar'.format(model_path))
-        print(f'Loaded model from {model_path}/checkpoint.pth.tar')
+        logger.info(f'Loaded model from {model_path}/checkpoint.pth.tar')
     else:
         assert False, 'type should be in [best, or last], but got {}'.format(type)
 
@@ -368,7 +368,8 @@ def load_checkpoint(model, model_path, type='best') -> None:
     for k, v in state_dict.items():
         names.append(k)
 
-    model.load_state_dict(state_dict)
+    missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+    logger.info(f"Missing keys: {missing_keys} \n Unexpected keys: {unexpected_keys}")
 
 
 def copy_config(args: argparse.Namespace, exp_root: Path, code_root: Path = Path("src/")):
