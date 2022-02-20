@@ -51,7 +51,7 @@ def extract_features(bs: int,
     # Extract support and query features
     n_tasks, shots_s, C, H, W = support.size()
     shots_q = query.size(1)
-    device = dist.get_rank()
+    device = 'cpu' if not torch.cuda.is_available() else dist.get_rank()
 
     if bs > 0:
         if n_tasks > 1:

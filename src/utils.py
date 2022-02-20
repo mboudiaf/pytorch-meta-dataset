@@ -210,8 +210,8 @@ def make_plot(ax: Axes,
     ax.imshow(img)
 
 
-def main_process(distributed: bool) -> bool:
-    if distributed:
+def main_process(args) -> bool:
+    if args.distributed:
         return dist.get_rank() == 0
 
     return True
