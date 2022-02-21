@@ -33,15 +33,20 @@ from .utils import (AverageMeter, save_checkpoint, get_model_dir,
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Eval')
-    parser.add_argument('--base_config', type=str, required=True, help='config file')
-    parser.add_argument('--method_config', type=str, default=True, help='Base config file')
+    parser.add_argument('--base_config', type=str, required=True,
+                        help='config file')
+    parser.add_argument('--method_config', type=str, default=True,
+                        help='Method config file')
+    parser.add_argument('--data_config', type=str, default=True,
+                        help='Data config file. Mostly to describe episodes.')
     parser.add_argument('--opts', default=None, nargs=argparse.REMAINDER)
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     assert args.base_config is not None
 
     cfg = load_cfg_from_cfg_file(Path(args.base_config))
     cfg.update(load_cfg_from_cfg_file(Path(args.method_config)))
+    cfg.update(load_cfg_from_cfg_file(Path(args.data_config)))
 
     if args.opts is not None:
         cfg = merge_cfg_from_list(cfg, args.opts)
@@ -93,7 +98,7 @@ def main_worker(rank: int,
                 world_size: int,
                 args: argparse.Namespace) -> None:
     logger.info(f"==> Running process rank {rank}.")
-    if args.distributed:
+    if torch.cuda.is_available():
         setup(args.port, rank, world_size)
     device: int = rank
 

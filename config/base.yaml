@@ -16,7 +16,7 @@ AUGMENTATIONS:
     augmentation: 'none'
 
 MODEL:
-    arch: 'wideres2810'
+    arch: 'resnet18'
     use_fc: True
 
 OPTIM:
@@ -35,7 +35,6 @@ DATA:
     val_source: 'ilsvrc_2012'
     test_source: 'ilsvrc_2012'
     batch_size: 256
-    path: '/Users/mboudiaf/data/converted'
     split: 'train'
     num_workers: 4
     train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']
@@ -52,7 +51,7 @@ EVAL-GENERAL:
     val_episodes: 100
     val_batch_size: 1
     iter: 1
-    extract_batch_size: 0  # set to >0 to batch feature extraction (save memory) at inference
+    extract_batch_size: 10  # set to >0 to batch feature extraction (save memory) at inference
     center_features: False
 
 

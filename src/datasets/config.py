@@ -1,6 +1,7 @@
 import argparse
 from typing import Tuple
 from pathlib import Path
+import os
 
 
 class DataConfig(object):
@@ -11,7 +12,7 @@ class DataConfig(object):
         """
 
         # General info
-        self.path: Path = Path(args.path)
+        self.path: Path = Path(os.getenv('RECORDS'))
         self.batch_size: int = args.batch_size
         self.val_batch_size: int = args.val_batch_size
         self.num_workers: int = args.num_workers
