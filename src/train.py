@@ -28,7 +28,7 @@ from .models.ingredient import get_model
 from .models.meta.metamodules.module import MetaModule
 from .utils import (AverageMeter, save_checkpoint, get_model_dir,
                     load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
-                    setup, cleanup, main_process, copy_config)
+                    setup, cleanup, main_process, copy_config, load_checkpoint)
 
 
 def parse_args() -> argparse.Namespace:
@@ -132,6 +132,8 @@ def main_worker(rank: int,
     if main_process(args):
         logger.info("=> Creating model '{}' with {} classes".format(args.arch, num_classes))
     model = get_model(args=args, num_classes=num_classes).to(rank)
+    model_path = get_model_dir(args=args)
+    load_checkpoint(model=model, model_path=model_path)
     if not isinstance(model, MetaModule) and world_size > 1:
         # model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
         model = DDP(model, device_ids=[rank])

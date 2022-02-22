@@ -34,7 +34,7 @@ test=mini_imagenet
 visu=False
 
 
-# ============= Main scripts =============
+# ============= Sanity tests =============
 
 # sanity_check:
 #        make base_source=mini_imagenet test_source=mini_imagenet data=1_shot test ;\
@@ -214,6 +214,21 @@ indexes:
 		source_path=${RECORDS}$${source} ;\
 		find $${source_path} -name '*.tfrecords' -type f -exec sh -c '$(exec)3 -m tfrecord.tools.tfrecord2idx $$2 $${2%.tfrecords}.index' sh $${source_path} {} \; ;\
 	done ;\
+
+# ============= Download pretrained models =============
+
+checkpoints/pretrained/imagenet/resnet18.pth:
+	mkdir -p checkpoints/pretrained/imagenet
+	wget https://download.pytorch.org/models/resnet18-f37072fd.pth -O checkpoints/pretrained/imagenet/resnet18.pth
+
+checkpoints/pretrained/imagenet/efficientnet_b4.pth:
+	mkdir -p checkpoints/pretrained/imagenet
+	wget https://github.com/lukemelas/EfficientNet-PyTorch/releases/download/1.0/efficientnet-b4-6ed6700e.pth -O checkpoints/pretrained/imagenet/efficientnet_b4.pth
+
+checkpoints/pretrained/imagenet21k/vit_b16.pth:
+	mkdir -p checkpoints/pretrained/imagenet21k
+	wget https://github.com/lukemelas/PyTorch-Pretrained-ViT/releases/download/0.0.2/B_16.pth -O checkpoints/pretrained/imagenet21k/vit_b16.pth
+
 
 # ============= Archive results =============
 

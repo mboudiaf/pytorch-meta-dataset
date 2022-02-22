@@ -18,6 +18,7 @@ from torch import Tensor
 from matplotlib.axes import Axes
 from mpl_toolkits.axes_grid1 import ImageGrid
 from loguru import logger
+import torch.nn as nn
 plt.style.use('ggplot')
 
 
@@ -287,13 +288,17 @@ def rand_bbox(size: torch.Size,
 
 
 def get_model_dir(args: argparse.Namespace) -> Path:
-    model_type = args.method if args.episodic_training else 'standard'
 
-    return Path(args.ckpt_path,
-                f'base={args.base_source}',
-                f'val={args.val_source}',
-                f'arch={args.arch}',
-                f'method={model_type}')
+    if args.load_from_pretrained:
+        path = Path('.') / 'checkpoints' / 'pretrained' / f'{args.arch}.pth'
+    else:
+        model_type = args.method if args.episodic_training else 'standard'
+        path = Path(args.ckpt_path,
+                    f'base={args.base_source}',
+                    f'val={args.val_source}',
+                    f'arch={args.arch}',
+                    f'method={model_type}')
+    return path
 
 
 def get_logs_path(model_path: Path, method: str, shot: int) -> Path:
@@ -353,22 +358,15 @@ def save_checkpoint(state: Any,
         shutil.copyfile(folder / filename, folder / 'model_best.pth.tar')
 
 
-def load_checkpoint(model, model_path, type='best') -> None:
-    if type == 'best':
-        checkpoint = torch.load('{}/model_best.pth.tar'.format(model_path))
-        logger.info(f'Loaded model from {model_path}/model_best.pth.tar')
-    elif type == 'last':
-        checkpoint = torch.load('{}/checkpoint.pth.tar'.format(model_path))
-        logger.info(f'Loaded model from {model_path}/checkpoint.pth.tar')
-    else:
-        assert False, 'type should be in [best, or last], but got {}'.format(type)
-
+def load_checkpoint(model: nn.Module, model_path: Path) -> None:
+    checkpoint = torch.load(model_path)
     state_dict = checkpoint['state_dict']
     names = []
     for k, v in state_dict.items():
         names.append(k)
-
-    missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+    missing_keys, unexpected_keys = model.load_state_dict(
+                                        state_dict, strict=False)
+    logger.info(f'Loaded model from {model_path}')
     logger.info(f"Missing keys: {missing_keys} \n Unexpected keys: {unexpected_keys}")
 
 

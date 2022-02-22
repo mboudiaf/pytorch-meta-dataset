@@ -16,6 +16,7 @@ AUGMENTATIONS:
     augmentation: 'none'
 
 MODEL:
+    load_from_pretrained: False
     arch: 'resnet18'
 
 OPTIM:
