@@ -4,9 +4,7 @@ from PIL import ImageEnhance
 
 from .utils import Split
 from .config import DataConfig
-
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+from loguru import logger
 
 jitter_param = dict(Brightness=0.4, Contrast=0.4, Color=0.4)
 
@@ -32,6 +30,7 @@ class ImageJitter(object):
 
 def get_transforms(data_config: DataConfig,
                    split: Split):
+
     if split == Split["TRAIN"]:
         return train_transform(data_config)
     else:
@@ -39,6 +38,8 @@ def get_transforms(data_config: DataConfig,
 
 
 def test_transform(data_config: DataConfig):
+    normalize = transforms.Normalize(mean=data_config.norm_mean,
+                                     std=data_config.norm_std)
     resize_size = int(data_config.image_size * 256 / 224)
     assert resize_size == data_config.image_size * 256 // 224
     # resize_size = data_config.image_size
@@ -53,6 +54,8 @@ def test_transform(data_config: DataConfig):
 
 
 def train_transform(data_config: DataConfig):
+    normalize = transforms.Normalize(mean=data_config.norm_mean,
+                                     std=data_config.norm_std)
     transf_dict = {'resize': transforms.Resize(data_config.image_size),
                    'center_crop': transforms.CenterCrop(data_config.image_size),
                    'random_resized_crop': transforms.RandomResizedCrop(data_config.image_size),

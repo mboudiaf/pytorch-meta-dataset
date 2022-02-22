@@ -132,8 +132,6 @@ def main_worker(rank: int,
     if main_process(args):
         logger.info("=> Creating model '{}' with {} classes".format(args.arch, num_classes))
     model = get_model(args=args, num_classes=num_classes).to(rank)
-    model_path = get_model_dir(args=args)
-    load_checkpoint(model=model, model_path=model_path)
     if not isinstance(model, MetaModule) and world_size > 1:
         # model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
         model = DDP(model, device_ids=[rank])

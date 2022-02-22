@@ -16,6 +16,7 @@ SERVER_PATH=~/scratch/tim# set the path where you want all the folders to be dro
 n_episodes=600
 source=records
 mode=test
+arch=resnet18
 
 # ------ General options ------------
 
@@ -25,9 +26,9 @@ data=variable
 method_cfg=config/method/$(method).yaml
 data_cfg=config/data/$(data).yaml
 
-base=mini_imagenet
-val=mini_imagenet
-test=mini_imagenet
+base=ilsvrc_2012
+val=ilsvrc_2012
+test=ilsvrc_2012
 
 # ------ Test-time options ------------
 
@@ -48,10 +49,12 @@ train:
 				--data_config ${data_cfg} \
 				--opts \
 				base_source $(base) \
+				arch $(arch) \
 				val_source $(val) \
 				debug $(debug) \
+				load_from_pretrained True
 
-run:
+eval:
 	$(exec) -m src.eval  --base_config config/base.yaml \
 				--method_config ${method_cfg} \
 				--data_config ${data_cfg} \
@@ -214,20 +217,6 @@ indexes:
 		source_path=${RECORDS}$${source} ;\
 		find $${source_path} -name '*.tfrecords' -type f -exec sh -c '$(exec)3 -m tfrecord.tools.tfrecord2idx $$2 $${2%.tfrecords}.index' sh $${source_path} {} \; ;\
 	done ;\
-
-# ============= Download pretrained models =============
-
-checkpoints/pretrained/imagenet/resnet18.pth:
-	mkdir -p checkpoints/pretrained/imagenet
-	wget https://download.pytorch.org/models/resnet18-f37072fd.pth -O checkpoints/pretrained/imagenet/resnet18.pth
-
-checkpoints/pretrained/imagenet/efficientnet_b4.pth:
-	mkdir -p checkpoints/pretrained/imagenet
-	wget https://github.com/lukemelas/EfficientNet-PyTorch/releases/download/1.0/efficientnet-b4-6ed6700e.pth -O checkpoints/pretrained/imagenet/efficientnet_b4.pth
-
-checkpoints/pretrained/imagenet21k/vit_b16.pth:
-	mkdir -p checkpoints/pretrained/imagenet21k
-	wget https://github.com/lukemelas/PyTorch-Pretrained-ViT/releases/download/0.0.2/B_16.pth -O checkpoints/pretrained/imagenet21k/vit_b16.pth
 
 
 # ============= Archive results =============

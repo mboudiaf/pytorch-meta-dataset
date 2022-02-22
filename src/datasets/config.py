@@ -2,6 +2,7 @@ import argparse
 from typing import Tuple
 from pathlib import Path
 import os
+from src.models.standard import model_configs
 
 
 class DataConfig(object):
@@ -22,6 +23,9 @@ class DataConfig(object):
         self.image_size: Tuple[int, int] = args.image_size
         self.test_transforms: bool = args.test_transforms
         self.train_transforms: bool = args.train_transforms
+        self.norm_mean = model_configs[args.arch]['mean']
+        self.norm_std = model_configs[args.arch]['std']
+
 
 
 class EpisodeDescriptionConfig(object):
