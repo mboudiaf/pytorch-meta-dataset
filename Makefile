@@ -8,8 +8,8 @@ loader=pytorch
 # ------ SERVER options --------- (only useful if you want to deploy/import results from remote server)
 
 USER=N/A # set the user of the remote server
-SERVER_IP=mboudiaf@narval.computecanada.ca# set the ip address of the remote server
-SERVER_PATH=~/scratch/tim# set the path where you want all the folders to be dropped
+SERVER_IP=# set the ip address of the remote server
+SERVER_PATH=# set the path where you want all the folders to be dropped
 
 # ------ Simulation hyperparams ------------
 
