@@ -70,7 +70,6 @@ import_results:
 		    --include='*.pdf' --include='*/' --exclude='*'\
 		$(SERVER_IP):${SERVER_PATH}/results ./
 
-
 import_models:
     rsync -avm --include='*.pth' \
 		 --include='*/' \
@@ -106,8 +105,19 @@ tar_and_deploy_data:
 # ============= Prepare data =============
 
 ilsvrc_2012:
+	# Assume you already have downloaded the file
+	mkdir ${DATASRC}/ILSVRC2012_img_train ;\
+	tar -xvf /ssd/download/ILSVRC2012_img_train.tar -C ${DATASRC}/ILSVRC2012_img_train ;\
+	find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
 	$(exec) -m src.datasets.conversion.convert_datasets_to_records \
 	  --dataset=ilsvrc_2012 \
+	  --ilsvrc_2012_data_root=${DATASRC}/ILSVRC2012_img_train \
+	  --splits_root=${SPLITS} \
+	  --records_root=${RECORDS}
+
+ilsvrc_2012_v2:
+	$(exec) -m src.datasets.conversion.convert_datasets_to_records \
+	  --dataset=ilsvrc_2012_v2 \
 	  --ilsvrc_2012_data_root=${DATASRC}/ILSVRC2012_img_train \
 	  --splits_root=${SPLITS} \
 	  --records_root=${RECORDS}

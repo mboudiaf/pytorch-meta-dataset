@@ -17,7 +17,6 @@ AUGMENTATIONS:
 
 MODEL:
     arch: 'resnet18'
-    use_fc: True
 
 OPTIM:
     gamma: 0.1

@@ -28,10 +28,14 @@ ImageNet's ontology in particular is described in the article.
 import json
 import os
 
-from absl import logging
+from loguru import logger
 from . import imagenet_stats
 import numpy as np
 import six
+import tensorflow.compat.v1 as tf
+
+FLAGS = tf.flags.FLAGS
+
 
 class Synset(object):
     """A Synset object."""
@@ -345,7 +349,7 @@ def propose_valid_test_roots(spanning_leaves,
 
     # For displaying the list of candidates
     for cand in valid_candidates:
-        logging.info('Candidate %s, %s with %d spanning leaves', cand.words, cand.wn_id, len(spanning_leaves[cand]))
+        logger.info('Candidate %s, %s with %d spanning leaves', cand.words, cand.wn_id, len(spanning_leaves[cand]))
 
     # Propose the first possible candidate for each of validation and test
     valid_root = valid_candidates[0]
@@ -410,7 +414,7 @@ def get_class_splits(spanning_leaves, valid_test_roots=None, **kwargs):
     # assigning each overlapping leaf to either validation or test classes
     # (roughly equally).
     overlap = [s for s in valid_wn_ids if s in test_wn_ids]
-    logging.info('Size of overlap: %d leaves', len(overlap))
+    logger.info('Size of overlap: %d leaves', len(overlap))
     assign_to_valid = True
     for s in overlap:
         if assign_to_valid:
@@ -774,14 +778,14 @@ def get_num_synset_2012_images(path, synsets_2012, files_to_skip=None):
         images.
     """
     if path:
-        logging.info('Attempting to read number of leaf images from %s...', path)
+        logger.info('Attempting to read number of leaf images from %s...', path)
         if os.path.exists(path):
             with open(path, 'r') as f:
                 num_synset_2012_images = json.load(f)
-                logging.info('Successful.')
+                logger.info('Successful.')
                 return num_synset_2012_images
 
-    logging.info('Unsuccessful. Deriving number of leaf images...')
+    logger.info('Unsuccessful. Deriving number of leaf images...')
     if files_to_skip is None:
         files_to_skip = set()
     num_synset_2012_images = {}
@@ -792,7 +796,7 @@ def get_num_synset_2012_images(path, synsets_2012, files_to_skip=None):
         final_files = img_files - files_to_skip
         skipped_files = all_files - final_files
         if skipped_files:
-            logging.info('Synset: %s, files_skipped: %s', s_2012.wn_id, skipped_files)
+            logger.info('Synset: %s, files_skipped: %s', s_2012.wn_id, skipped_files)
         # Size of the set difference (-) between listed files and `files_to_skip`.
         num_synset_2012_images[s_2012.wn_id] = len(final_files)
 
@@ -929,18 +933,14 @@ def create_imagenet_specification(split_enum,
     # Create Synsets for all ImageNet synsets (82115 in total).
     data_root = FLAGS.ilsvrc_2012_data_root
     synsets = {}
-    path_to_words = FLAGS.path_to_words
-    if not path_to_words:
-        path_to_words = os.path.join(data_root, 'words.txt')
+    path_to_words = os.path.join(data_root, 'words.txt')
     with open(path_to_words) as f:
         for line in f:
             wn_id, words = line.rstrip().split('\t')
             synsets[wn_id] = Synset(wn_id, words, set(), set())
 
     # Populate the parents / children arrays of these Synsets.
-    path_to_is_a = FLAGS.path_to_is_a
-    if not path_to_is_a:
-        path_to_is_a = os.path.join(data_root, 'wordnet.is_a.txt')
+    path_to_is_a = os.path.join(data_root, 'wordnet.is_a.txt')
     with open(path_to_is_a, 'r') as f:
         for line in f:
             parent, child = line.rstrip().split(' ')
