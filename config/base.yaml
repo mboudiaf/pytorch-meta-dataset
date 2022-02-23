@@ -1,7 +1,7 @@
 TRAINING:
     print_freq: 100
     label_smoothing: 0.1
-    num_updates: 100000
+    num_updates: 75000
     ckpt_path: 'checkpoints'
     seed: 2021
     visdom_port: 0
@@ -36,9 +36,11 @@ DATA:
     test_source: 'ilsvrc_2012'
     batch_size: 256
     split: 'train'
-    num_workers: 4
-    train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']
+    num_workers: 6
+    train_transforms: ['resize', 'to_tensor', 'normalize', 'gaussian', 'jitter']
     test_transforms: ['resize', 'center_crop', 'to_tensor', 'normalize']
+    gaussian_noise_std: 0.
+    jitter_amount: 0
     num_unique_descriptions: 0
     shuffle: True
     loader_version: 'pytorch'

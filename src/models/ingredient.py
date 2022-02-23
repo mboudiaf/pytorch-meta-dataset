@@ -8,7 +8,7 @@ def get_model(args: argparse.Namespace,
               num_classes: int):
     if 'MAML' in args.method:
         logger.info(f"Meta {args.arch} loaded")
-        return meta_dict[args.arch](num_classes=num_classes, use_fc=args.use_fc)
+        return meta_dict[args.arch](num_classes=num_classes)
     else:
         logger.info(f"Standard {args.arch} loaded")
         return standard_dict[args.arch](num_classes=num_classes,

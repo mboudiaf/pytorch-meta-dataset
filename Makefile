@@ -20,15 +20,15 @@ arch=resnet18
 
 # ------ General options ------------
 
-method=simpleshot
+method=finetune
 data=variable
 
 method_cfg=config/method/$(method).yaml
 data_cfg=config/data/$(data).yaml
 
-base=ilsvrc_2012
-val=ilsvrc_2012
-test=ilsvrc_2012
+base=ilsvrc_2012_v2
+val=aircraft
+test=aircraft
 
 # ------ Test-time options ------------
 
@@ -52,7 +52,8 @@ train:
 				arch $(arch) \
 				val_source $(val) \
 				debug $(debug) \
-				load_from_pretrained True
+				loader_version $(loader) \
+				load_from_pretrained True \
 
 eval:
 	$(exec) -m src.eval  --base_config config/base.yaml \
@@ -64,7 +65,15 @@ eval:
 				 test_source ${test} \
 				 val_episodes $(n_episodes) \
 				 visu ${visu} \
-				 val_batch_size 1 # batching is not straightforward when episodes have random formats
+				 val_batch_size 1 \
+				 load_from_pretrained True ;\
+
+# ============= Pre-made recipes ===================
+
+test_all:
+	for source in omniglot aircraft cu_birds dtd quickdraw fungi traffic_sign mscoco; do \
+	    make eval test=$${source} ;\
+	done ;\
 
 # ============= Communication with server =============
 
@@ -108,10 +117,11 @@ tar_and_deploy_data:
 # ============= Prepare data =============
 
 ilsvrc_2012:
-	# Assume you already have downloaded the file
+	# AssumeS you already have downloaded the file
 	mkdir ${DATASRC}/ILSVRC2012_img_train ;\
 	tar -xvf /ssd/download/ILSVRC2012_img_train.tar -C ${DATASRC}/ILSVRC2012_img_train ;\
-	find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
+	# Execute the following in the directory ${DATASRC}/ILSVRC2012_img_train
+# 	find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
 	$(exec) -m src.datasets.conversion.convert_datasets_to_records \
 	  --dataset=ilsvrc_2012 \
 	  --ilsvrc_2012_data_root=${DATASRC}/ILSVRC2012_img_train \
@@ -213,8 +223,8 @@ tiered:
 
 
 indexes:
-	for source in tiered_imagenet; do \
-		source_path=${RECORDS}$${source} ;\
+	for source in ilsvrc_2012_v2; do \
+		source_path=${RECORDS}/$${source} ;\
 		find $${source_path} -name '*.tfrecords' -type f -exec sh -c '$(exec)3 -m tfrecord.tools.tfrecord2idx $$2 $${2%.tfrecords}.index' sh $${source_path} {} \; ;\
 	done ;\
 

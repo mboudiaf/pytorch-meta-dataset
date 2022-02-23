@@ -2,6 +2,7 @@ from absl import logging
 from typing import Union, List, Tuple
 import numpy as np
 from numpy.random import RandomState
+from loguru import logger
 from . import dataset_spec as dataset_spec_lib
 from . import imagenet_specification
 from . config import EpisodeDescriptionConfig
@@ -293,9 +294,7 @@ class EpisodeDescriptionSampler(object):
 
         # For Omniglot.
         if self.use_bilevel_hierarchy:
-            print('=======================')
-            print('Using bilevel hierarchy !')
-            print('=======================')
+            logger.info('Using bilevel hierarchy !')
             if self.num_ways:  # noqa: E111
                 raise ValueError('"use_bilevel_hierarchy" is incompatible with '
                                  '"num_ways".')
@@ -328,9 +327,7 @@ class EpisodeDescriptionSampler(object):
                               dataset_spec_lib.HierarchicalDatasetSpecification):
                 raise ValueError('Only applicable to datasets with a hierarchical '
                                  'dataset specification.')
-            print('=======================')
-            print('Using DAG hierarchy !')
-            print('=======================')
+            logger.info('Using DAG hierarchy !')
 
             # A DAG for navigating the ontology for the given split.
             graph = dataset_spec.get_split_subgraph(self.split)  # noqa: E111
@@ -392,7 +389,7 @@ class EpisodeDescriptionSampler(object):
             # Retrieve the list of relative class IDs for an internal node sampled
             # uniformly at random.
             episode_classes_rel = random_gen.choice(self.span_leaves_rel)  # noqa: E111
-            # print(torch.utils.data.get_worker_info(), episode_classes_rel)
+            # logger.info(torch.utils.data.get_worker_info(), episode_classes_rel)
             # If the number of chosen classes is larger than desired, sub-sample them.
             if len(episode_classes_rel) > self.max_ways_upper_bound:  # noqa: E111
                 episode_classes_rel = random_gen.choice(

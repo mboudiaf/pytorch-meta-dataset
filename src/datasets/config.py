@@ -25,7 +25,8 @@ class DataConfig(object):
         self.train_transforms: bool = args.train_transforms
         self.norm_mean = model_configs[args.arch]['mean']
         self.norm_std = model_configs[args.arch]['std']
-
+        self.gaussian_noise_std = args.gaussian_noise_std
+        self.jitter_amount = args.jitter_amount
 
 
 class EpisodeDescriptionConfig(object):

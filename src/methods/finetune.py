@@ -1,10 +1,11 @@
 import argparse
 from typing import Dict, Optional, Tuple
-
+from loguru import logger
 import torch
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch import Tensor
+import torch.nn as nn
 
 from .method import FSmethod
 from ..metrics import Metric
@@ -21,6 +22,8 @@ class Finetune(FSmethod):
         self.iter = args.iter
         self.extract_batch_size = args.extract_batch_size
         self.finetune_all_layers = args.finetune_all_layers
+        self.cosine_head = args.finetune_cosine_head
+        self.weight_norm = args.finetune_weight_norm
         self.lr = args.finetune_lr
 
         self.episodic_training = False
@@ -53,6 +56,14 @@ class Finetune(FSmethod):
                                             iteration,
                                             **kwargs)
 
+    def _do_data_dependent_init(self, classifier: nn.Module, feat_s: Tensor):
+        """Returns ops for the data-dependent init of g and maybe b_fc."""
+        w_fc_normalized = F.normalize(classifier.weight_v, dim=1)  # [num_classes, d]
+        output_init = feat_s @ w_fc_normalized.t()  # [n_s, num_classes]
+        var_init = output_init.var(0, keepdim=True)  # [num_classes]
+        # Data-dependent init values.
+        classifier.weight_g.data = 1. / torch.sqrt(var_init + 1e-10)
+
     def forward(self,
                 model: torch.nn.Module,
                 support: Tensor,
@@ -74,7 +85,6 @@ class Finetune(FSmethod):
             self.weights : tensor of shape [n_task, num_class, feature_dim]
         """
         device = dist.get_rank()
-        model.eval()
         n_tasks = support.size(0)
         if n_tasks > 1:
             raise ValueError('Finetune method can only deal with 1 task at a time. \
@@ -91,9 +101,20 @@ class Finetune(FSmethod):
                                               query,
                                               model)
 
-            classifier = torch.nn.Linear(feat_s.size(-1), num_classes).to(device)
-            preds_q = classifier(feat_q[0]).argmax(-1)
-            probs_s = classifier(feat_s[0]).softmax(-1)
+            classifier = nn.Linear(feat_s.size(-1), num_classes, bias=False).to(device)
+            if self.weight_norm:
+                classifier = nn.utils.weight_norm(classifier, name='weight')
+
+            # self._do_data_dependent_init(classifier, feat_s)
+
+            if self.cosine_head:
+                feat_s = F.normalize(feat_s, dim=-1)
+                feat_q = F.normalize(feat_q, dim=-1)
+
+            logits_q = self.temp * classifier(feat_q[0])
+            logits_s = self.temp * classifier(feat_s[0])
+            preds_q = logits_q.argmax(-1)
+            probs_s = logits_s.softmax(-1)
             self.record_info(iteration=0,
                              task_ids=task_ids,
                              metrics=metrics,
@@ -110,16 +131,19 @@ class Finetune(FSmethod):
         optimizer = torch.optim.Adam(params, lr=self.lr)
 
         # Run adaptation
-        with torch.set_grad_enabled(self.finetune_all_layers):
-            feat_s, feat_q = extract_features(self.extract_batch_size,
-                                              support,
-                                              query,
-                                              model)
-            feat_s = F.normalize(feat_s, dim=-1)
-            feat_q = F.normalize(feat_q, dim=-1)
-
         for i in range(1, self.iter):
-            probs_s = classifier(feat_s[0]).softmax(-1)
+            if self.finetune_all_layers:
+                model.train()
+                feat_s, feat_q = extract_features(self.extract_batch_size,
+                                                  support,
+                                                  query,
+                                                  model)
+                if self.cosine_head:
+                    feat_s = F.normalize(feat_s, dim=-1)
+                    feat_q = F.normalize(feat_q, dim=-1)
+
+            logits_s = self.temp * classifier(feat_s[0])
+            probs_s = logits_s.softmax(-1)
             loss = - (y_s_one_hot * probs_s.log()).sum(-1).mean(-1)
 
             optimizer.zero_grad()

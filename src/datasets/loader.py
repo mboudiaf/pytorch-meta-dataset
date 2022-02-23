@@ -7,6 +7,7 @@ import torch
 import numpy as np
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
+from loguru import logger
 
 from .utils import Split
 from .pipeline import worker_init_fn_
@@ -32,7 +33,7 @@ def get_dataspecs(args: argparse.Namespace,
     if source == 'omniglot':
         # use_bilevel_ontology_list[sources.index('omniglot')] = True
         use_bilevel_ontology = True
-    if source == 'ilsvrc_2012':
+    if source in ['ilsvrc_2012', 'ilsvrc_2012_v2']:
         use_dag_ontology = True
 
     episod_config.use_bilevel_ontology = use_bilevel_ontology

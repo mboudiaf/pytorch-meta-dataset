@@ -45,8 +45,8 @@ def parse_args() -> argparse.Namespace:
     assert args.base_config is not None
 
     cfg = load_cfg_from_cfg_file(Path(args.base_config))
-    cfg.update(load_cfg_from_cfg_file(Path(args.method_config)))
     cfg.update(load_cfg_from_cfg_file(Path(args.data_config)))
+    cfg.update(load_cfg_from_cfg_file(Path(args.method_config)))
 
     if args.opts is not None:
         cfg = merge_cfg_from_list(cfg, args.opts)
@@ -72,8 +72,8 @@ def meta_val(args: argparse.Namespace,
         if i >= total_episodes:
             break
 
-        y_s = support_labels.to(device, non_blocking=True)
-        y_q = query_labels.to(device, non_blocking=True)
+        y_s = support_labels.to(device)
+        y_q = query_labels.to(device)
 
         _, soft_preds_q = method(model=model,
                                  support=support,
@@ -111,6 +111,7 @@ def main_worker(rank: int,
         cudnn.deterministic = True
 
     # ============ Define loaders ================
+
     train_loader, num_classes = get_dataloader(args=args,
                                                source=args.base_source,
                                                batch_size=args.batch_size,
@@ -128,6 +129,7 @@ def main_worker(rank: int,
                                    version=args.loader_version)
 
     # ============ Define model ================
+
     num_classes = args.num_ways if args.episodic_training else num_classes
     if main_process(args):
         logger.info("=> Creating model '{}' with {} classes".format(args.arch, num_classes))
@@ -154,10 +156,12 @@ def main_worker(rank: int,
                                                              dtype=torch.float32)}
 
     # ============ Optimizer ================
+
     optimizer = get_optimizer(args=args, model=model)
     scheduler = get_scheduler(args=args, optimizer=optimizer)
 
     # ============ Method ================
+
     method = all_methods[args.method](args=args)
     if not args.episodic_training:
         if args.loss not in __losses__:
@@ -170,18 +174,19 @@ def main_worker(rank: int,
     model.train()
     method.train()
 
-    best_val_acc1 = 0.
+    best_val_acc1 = 0.  # noqa: F841
     tqdm_bar = tqdm(train_loader, total=args.num_updates)
     for i, data in enumerate(tqdm_bar):
         if i >= args.num_updates:
             break
 
         # ======== Forward / Backward pass =========
+
         t0 = time.time()
         if args.episodic_training:
             support, query, support_labels, target = data
-            support, support_labels = support.to(device), support_labels.to(device, non_blocking=True)
-            query, target = query.to(device), target.to(device, non_blocking=True)
+            support, support_labels = support.to(device), support_labels.to(device)
+            query, target = query.to(device), target.to(device)
 
             loss, preds_q = method(support=support,
                                    query=query,
@@ -190,7 +195,7 @@ def main_worker(rank: int,
                                    model=model)  # [batch, q_shot]
         else:
             (input_, target) = data
-            input_, target = input_.to(device), target.to(device, non_blocking=True).long()
+            input_, target = input_.to(device), target.to(device).long()
             loss = loss_fn(input_, target, model)
 
         optimizer.zero_grad()
@@ -206,7 +211,7 @@ def main_worker(rank: int,
             dist.all_reduce(loss)
         if main_process(args):
             loss = loss.sum() / b_size
-            losses.update(loss.item(), b_size.item(), i == 0)
+            losses.update(loss.item(), i == 0)
             batch_time.update(time.time() - t0, i == 0)
             t0 = time.time()
 
@@ -239,7 +244,7 @@ def main_worker(rank: int,
 
         # ============ logger.info / log metrics ============
         if i % args.print_freq == 0 and main_process(args):
-            logger.info('Iration: [{0}/{1}]\t'
+            logger.info('Iteration: [{0}/{1}]\t'
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                         'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                         'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'.format(

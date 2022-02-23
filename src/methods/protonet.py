@@ -61,13 +61,10 @@ class ProtoNet(FSmethod):
         num_classes = y_s.unique().size(0)
 
         with torch.set_grad_enabled(self.training):
-            z_s, z_q = extract_features(self.extract_batch_size,
-                                        support, query, model)
+            z_s, z_q = extract_features(0, support, query, model)
 
         centroids = compute_centroids(z_s, y_s)  # [batch, num_class, d]
-        l2_distance = (- 2 * z_q.matmul(centroids.transpose(-2, -1))
-                       + (centroids**2).sum(-1).unsqueeze(-2)
-                       + (z_q**2).sum(-1).unsqueeze(-1))  # [batch, q_shot, num_class]
+        l2_distance = torch.cdist(z_q, centroids) ** 2  # [batch, q_shot, num_class]
 
         log_probas = (-l2_distance).log_softmax(-1)  # [batch, q_shot, num_class]
         one_hot_q = get_one_hot(y_q, num_classes)  # [batch, q_shot, num_class]

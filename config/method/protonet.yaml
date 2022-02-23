@@ -1,11 +1,3 @@
-TRAINING:
-  num_ways: 5
-  num_support: 5
-  num_query: 20
-  val_batch_size: 1
-  ignore_dag_ontology: True
-  batch_size: 1
-
 METHOD:
   method: 'ProtoNet'
   episodic_training: True
@@ -13,9 +5,10 @@ METHOD:
   eval_metrics: ['Acc']
 
 DATA:
+    batch_size: 1
     image_size: 126
-    train_transforms: ['random_resized_crop', 'jitter', 'random_flip', 'to_tensor', 'normalize']
-    test_transforms: ['resize', 'center_crop', 'to_tensor', 'normalize']
+    gaussian_noise_std: 0.1533
+    jitter_amount: 5
     num_unique_descriptions: 0
     shuffle: True
 
@@ -23,10 +16,9 @@ TRAINING:
   num_updates: 75000
 
 OPTIM:
-    gamma: 0.83
-    lr: 0.0006
-    lr_stepsize: 2500
-    nesterov: False
-    weight_decay: 0.0002
+    gamma: 0.885
+    lr: 0.00025
+    lr_stepsize: 500
+    weight_decay: 0.0001
     optimizer_name: 'Adam'
     scheduler: 'step'

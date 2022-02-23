@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from typing import Union
 
 from .utils import Split
@@ -55,7 +56,9 @@ class Reader(object):
         # We construct one dataset object per class. Each dataset outputs a stream
         # of `(example_string, dataset_id)` tuples.
         class_datasets = []
-        for dataset_id in range(self.num_classes):
+        pbar = tqdm(range(self.num_classes))
+        pbar.set_description("Constructing class dataset")
+        for dataset_id in pbar:
             class_id = self.class_set[dataset_id]  # noqa: E111
             if record_file_pattern.startswith('{}_{}'):
                 # TODO(lamblinp): Add support for sharded files if needed.

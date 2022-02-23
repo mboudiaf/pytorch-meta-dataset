@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 from PIL import Image
 from torch.utils.data import Dataset
+from loguru import logger
 
 from . import reader
 from . import sampling
@@ -23,14 +24,16 @@ class EpisodicDataset(torch.utils.data.IterableDataset):
     def __init__(self,
                  class_datasets: List[TFRecordDataset],
                  sampler: EpisodeDescriptionSampler,
-                 transforms: torchvision.transforms,
+                 support_transforms: torchvision.transforms,
+                 query_transforms: torchvision.transforms,
                  max_support_size: int,
                  max_query_size: int):
         super().__init__()
 
         self.class_datasets = class_datasets
         self.sampler = sampler
-        self.transforms = transforms
+        self.support_transforms = support_transforms
+        self.query_transforms = query_transforms
         self.max_query_size = max_query_size
         self.max_support_size = max_support_size
         self.random_gen = np.random.RandomState()
@@ -57,7 +60,7 @@ class EpisodicDataset(torch.utils.data.IterableDataset):
                         sample_dic = parse_record(sample_dic)
                         used_ids.append(sample_dic['id'])
 
-                        support_images.append(self.transforms(sample_dic['image']).unsqueeze(0))
+                        support_images.append(self.support_transforms(sample_dic['image']).unsqueeze(0))
                         sup_added += 1
 
                 while query_added < nb_query:
@@ -67,14 +70,13 @@ class EpisodicDataset(torch.utils.data.IterableDataset):
                         sample_dic = parse_record(sample_dic)
 
                         used_ids.append(sample_dic['id'])
-                        query_images.append(self.transforms(sample_dic['image']).unsqueeze(0))
+                        query_images.append(self.query_transforms(sample_dic['image']).unsqueeze(0))
 
                         query_added += 1
 
                 # print(f"Class {class_id} contains duplicate: {contains_duplicates(used_ids)}")
                 support_labels.extend([episode_classes.index(class_id)] * nb_support)
                 query_labels.extend([episode_classes.index(class_id)] * nb_query)
-
             support_images = torch.cat(support_images, 0)
             query_images = torch.cat(query_images, 0)
 
@@ -223,14 +225,16 @@ def make_episode_pipeline(dataset_spec: Union[HDS, BDS, DS],
         use_bilevel_hierarchy=episode_descr_config.use_bilevel_ontology,
         ignore_hierarchy_probability=ignore_hierarchy_probability)
 
-    transforms = get_transforms(data_config, split)
+    support_transforms = get_transforms(data_config, split)
+    query_transforms = get_transforms(data_config, Split["TEST"])  # query sets are neither jittered or gaussian noised: https://github.com/google-research/meta-dataset/blob/main/meta_dataset/learn/gin/setups/data_config.gin
 
     _, max_support_size, max_query_size = sampler.compute_chunk_sizes()
     episodic_dataset_list.append(EpisodicDataset(class_datasets=class_datasets,
                                                  sampler=sampler,
                                                  max_support_size=max_support_size,
                                                  max_query_size=max_query_size,
-                                                 transforms=transforms))
+                                                 support_transforms=support_transforms,
+                                                 query_transforms=query_transforms))
     offset += len(class_datasets)
 
     return ZipDataset(episodic_dataset_list)

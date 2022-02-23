@@ -289,15 +289,12 @@ def rand_bbox(size: torch.Size,
 
 def get_model_dir(args: argparse.Namespace) -> Path:
 
-    if args.load_from_pretrained:
-        path = Path('.') / 'checkpoints' / 'pretrained' / f'{args.arch}.pth'
-    else:
-        model_type = args.method if args.episodic_training else 'standard'
-        path = Path(args.ckpt_path,
-                    f'base={args.base_source}',
-                    f'val={args.val_source}',
-                    f'arch={args.arch}',
-                    f'method={model_type}')
+    model_type = args.method if args.episodic_training else 'standard'
+    path = Path(args.ckpt_path,
+                f'base={args.base_source}',
+                f'val={args.val_source}',
+                f'arch={args.arch}',
+                f'method={model_type}')
     return path
 
 

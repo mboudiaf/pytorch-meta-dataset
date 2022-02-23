@@ -22,8 +22,7 @@ from .models.meta.metamodules.module import MetaModule
 from .train import parse_args
 from .utils import make_episode_visualization, plot_metrics
 from .utils import (compute_confidence_interval, load_checkpoint, get_model_dir,
-                    load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
-                    setup, cleanup, copy_config)
+                    find_free_port, setup, cleanup, copy_config)
 
 
 def hash_config(args: argparse.Namespace) -> str:
@@ -77,16 +76,16 @@ def main_worker(rank: int,
         cudnn.deterministic = True
 
     # ===============> Load data <=================
-    # ==============================================
+    # =============================================
     current_split = "TEST" if args.eval_mode == 'test' else "VALID"
 
-    _, num_classes_base = get_dataloader(args=args,
-                                         source=args.base_source,
-                                         batch_size=args.batch_size,
-                                         world_size=world_size,
-                                         split=Split["TRAIN"],
-                                         episodic=True,
-                                         version=args.loader_version)
+    # _, num_classes_base = get_dataloader(args=args,
+    #                                      source=args.base_source,
+    #                                      batch_size=args.batch_size,
+    #                                      world_size=world_size,
+    #                                      split=Split["TRAIN"],
+    #                                      episodic=True,
+    #                                      version=args.loader_version)
 
     test_loader, num_classes_test = get_dataloader(args=args,
                                                    source=args.test_source,
@@ -96,20 +95,21 @@ def main_worker(rank: int,
                                                    episodic=True,
                                                    version=args.loader_version)
 
-    logger.info(f"BASE dataset: {args.base_source} ({num_classes_base} classes)")
+    # logger.info(f"BASE dataset: {args.base_source} ({num_classes_base} classes)")
     logger.info(f"{current_split} dataset: {args.test_source} ({num_classes_test} classes)")
 
     # ===============> Load model <=================
     # ==============================================
-    num_classes = 5 if args.episodic_training else num_classes_base
-    model = get_model(args=args, num_classes=num_classes).to(rank)
+    # num_classes = 5 if args.episodic_training else num_classes_base
+    model = get_model(args=args, num_classes=5).to(rank)
     if not isinstance(model, MetaModule) and world_size > 1:
         model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
         model = DDP(model, device_ids=[rank])
 
-    model_path = get_model_dir(args=args)
     logger.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
-    load_checkpoint(model=model, model_path=model_path, type=args.model_tag)
+    if not args.load_from_pretrained:
+        model_path = get_model_dir(args=args)
+        load_checkpoint(model=model, model_path=model_path)
     model.eval()
 
     # ===============> Define metrics <=================
