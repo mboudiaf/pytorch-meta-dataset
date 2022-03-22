@@ -114,7 +114,7 @@ class _CrossEntropy(_Loss):
         else:
             logits = model(input_)
 
-            return self.loss_fn(logits, one_hot_targets)
+            return self.loss_fn(logits, one_hot_targets), logits.softmax(-1)
 
 
 class _FocalLoss(_Loss):

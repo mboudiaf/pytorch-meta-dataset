@@ -28,7 +28,8 @@ from .models.ingredient import get_model
 from .models.meta.metamodules.module import MetaModule
 from .utils import (AverageMeter, save_checkpoint, get_model_dir,
                     load_cfg_from_cfg_file, merge_cfg_from_list, find_free_port,
-                    setup, cleanup, main_process, copy_config, load_checkpoint)
+                    setup, cleanup, main_process, copy_config, load_checkpoint,
+                    make_episode_visualization)
 
 
 def parse_args() -> argparse.Namespace:
@@ -135,19 +136,19 @@ def main_worker(rank: int,
         logger.info("=> Creating model '{}' with {} classes".format(args.arch, num_classes))
     model = get_model(args=args, num_classes=num_classes).to(rank)
     if not isinstance(model, MetaModule) and world_size > 1:
-        # model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
+        model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
         model = DDP(model, device_ids=[rank])
 
     if main_process(args):
         logger.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
-    model_dir = get_model_dir(args)
-    copy_config(args, model_dir)
+    exp_dir = get_model_dir(args)
+    copy_config(args, exp_dir)
 
     # ============ Define metrics ================
     batch_time = AverageMeter()
     losses = AverageMeter()
-    top1 = AverageMeter()
+    train_acc = AverageMeter()
 
     if main_process(args):
         metrics: Dict[str, Tensor] = {"train_loss": torch.zeros(args.num_updates // args.print_freq,
@@ -188,16 +189,17 @@ def main_worker(rank: int,
             support, support_labels = support.to(device), support_labels.to(device)
             query, target = query.to(device), target.to(device)
 
-            loss, preds_q = method(support=support,
-                                   query=query,
-                                   y_s=support_labels,
-                                   y_q=target,
-                                   model=model)  # [batch, q_shot]
+            loss, soft_preds = method(support=support,
+                                      query=query,
+                                      y_s=support_labels,
+                                      y_q=target,
+                                      model=model)  # [batch, q_shot]
         else:
             (input_, target) = data
             input_, target = input_.to(device), target.to(device).long()
-            loss = loss_fn(input_, target, model)
+            loss, soft_preds = loss_fn(input_, target, model)
 
+        train_acc.update((soft_preds.argmax(-1) == target).float().mean().item(), i == 0)
         optimizer.zero_grad()
         loss.mean().backward()
         optimizer.step()
@@ -232,29 +234,43 @@ def main_worker(rank: int,
                                        'state_dict': model.state_dict(),
                                        'best_prec1': best_val_acc1},
                                 is_best=is_best,
-                                folder=model_dir)
+                                folder=exp_dir)
 
                 for k in metrics:
                     if 'val' in k:
                         metrics[k][int(i / args.eval_freq)] = eval(k)
 
                 for k, e in metrics.items():
-                    path = os.path.join(model_dir, f"{k}.npy")
+                    path = os.path.join(exp_dir, f"{k}.npy")
                     np.save(path, e.cpu().numpy())
 
         # ============ logger.info / log metrics ============
+
         if i % args.print_freq == 0 and main_process(args):
             logger.info('Iteration: [{0}/{1}]\t'
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                         'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                        'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'.format(
+                        'Training accuracy {train_acc.val:.3f} ({train_acc.avg:.3f})\t'.format(
                          i, args.num_updates, batch_time=batch_time,  # noqa: E121
-                         loss=losses, top1=top1))
+                         loss=losses, train_acc=train_acc))
 
             train_loss = losses.avg
             for k in metrics:
                 if 'train' in k:
                     metrics[k][int(i / args.print_freq)] = eval(k)
+
+        # ============ logger.info / log metrics ============
+        if args.debug and i % args.visu_freq == 0 and args.episodic_training:
+            visu_path = os.path.join(exp_dir, 'episode_samples', args.loader_version)
+            os.makedirs(visu_path, exist_ok=True)
+            path = os.path.join(visu_path, f'visu_{i}.png')
+            make_episode_visualization(args,
+                                       support[0].cpu().numpy(),
+                                       query[0].cpu().numpy(),
+                                       support_labels[0].cpu().numpy(),
+                                       target[0].cpu().numpy(),
+                                       soft_preds[0].cpu().numpy(),
+                                       path)
 
     cleanup()
 
@@ -263,7 +279,7 @@ if __name__ == "__main__":
     args = parse_args()
     # os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in args.gpus)
     if args.debug:
-        args.batch_size = 16
+        args.batch_size = 16 if not args.episodic_training else 1
         args.val_episodes = 10
     world_size = len(args.gpus)
     distributed = world_size > 1

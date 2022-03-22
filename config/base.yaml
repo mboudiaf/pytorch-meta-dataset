@@ -16,7 +16,7 @@ AUGMENTATIONS:
     augmentation: 'none'
 
 MODEL:
-    load_from_pretrained: False
+    load_from_timm: False
     arch: 'resnet18'
 
 OPTIM:
@@ -30,7 +30,7 @@ OPTIM:
 
 DATA:
      # Data config
-    image_size: 84
+    image_size: 126
     base_source: 'ilsvrc_2012'
     val_source: 'ilsvrc_2012'
     test_source: 'ilsvrc_2012'

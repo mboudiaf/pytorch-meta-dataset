@@ -3,3 +3,22 @@ METHOD:
   episodic_training: False
   eval_metrics: ['Acc']
   hyperparams: ['method', 'arch', 'base_source', 'test_source']
+
+DATA:
+    batch_size: 256
+    image_size: 126
+    gaussian_noise_std: 0.1533
+    jitter_amount: 5
+    num_unique_descriptions: 0
+    shuffle: True
+
+TRAINING:
+  num_updates: 100000
+
+OPTIM:
+    gamma: 0.885
+    lr: 0.0001
+    lr_stepsize: 5000
+    weight_decay: 0.0001
+    optimizer_name: 'Adam'
+    scheduler: 'step'

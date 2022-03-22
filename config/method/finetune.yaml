@@ -9,6 +9,3 @@ METHOD:
   finetune_cosine_head: True
   finetune_weight_norm: True
   hyperparams: ['method', 'arch', 'base_source', 'test_source', 'finetune_all_layers']
-
-DATA:
-  image_size: 126

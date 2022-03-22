@@ -1,23 +1,30 @@
 # PyTorch META-DATASET (Few-shot classification benchmark)
 
-This repo contains a PyTorch implementation of [meta-dataset](https://github.com/google-research/meta-dataset) and a unified implementation of some few-shot methods. This repo may be useful to you if you:
+This repo contains a PyTorch implementation of [meta-dataset](https://github.com/google-research/meta-dataset) and a unified implementation of some few-shot methods.
 
-- want some pre-trained ImageNet models in PyTorch for META-DATASET;
-- want to benchmark your method on META-DATASET (but do not want to mix your PyTorch code with the original TensorFlow implementation);
-- are looking for a codebase to visualize few-shot episodes.
+## Updates
 
-**Benefits over original code**:
+- March 2022 : Following authors' updated version META-DATASET V2 https://openreview.net/pdf?id=Q0hm0_G1mpHI , I tried to include more ImageNet pre-trained models from https://github.com/rwightman/pytorch-image-models and gather all scripts in a single MakeFile.
 
-1. This repo can be properly seeded, allowing to repeat the same random series of episodes if needed;
-2. Data shuffling is performed without using a buffer, hence reducing the memory consumption;
-3. Better results can be obtained using this repo thanks to an enhanced way of resizing images. More details in the paper.
+**Some benefits over original code**:
+
+1. Enable you to run the full pipeline in PyTorch, and easy parametrization (no gin files).
+2. This repo can be properly seeded, allowing to repeat the same random series of episodes if needed;
+3. Data shuffling is performed without using a buffer, but rather by loading the start/end bit location of each image in each record, and shuffling those locations only. Therefore, memory consumption is theoretically reduced.
+4. Tools to visualize few-shot episodes and visualize intra-task metrics (relevant for methods that perform test-time optimization).
 
 Note that **this code also includes the original implementation** for comparison (using the PyTorch workaround proposed by the authors). If you wish to use the original implementation, set the option `loader_version: 'tf'` in [`base.yaml`](config/base.yaml#L44) (by default set to `pytorch`).
 
+**Some cons over original code**:
+
+1. Less methods
+2. Optimal hyperparameters may not be properly set
+3. Not as frequently and well maintained than the original repo.
+
 **Yet to do**:
 
-1. Add more methods
-2. Test for the multi-source setting
+1. Make multi-source training available.
+2. Include SimCLR episodes.
 
 ## Table of contents
 * [Table of contents](#table-of-contents)
@@ -57,32 +64,44 @@ bash scripts/make_records/make_index_files.sh <path_to_converted_data>
 ```
 This may take a few minutes. Once all this is done, set the `path` variable in [`config/base.yaml`](config/base.yaml#L37) to your data folder.
 
+### 1.3 Exports
+
+```
+export RECORDS='path/to/records'
+```
+
 ### 1.3 Download pre-trained models
 
-We provide trained Resnet-18 and WRN-2810 models on the training split of ILSVRC_2012 at [checkpoints](https://drive.google.com/file/d/1Sp7OJEK9-RKnlXjz4DEdM-9BHe1j0rtP/view?usp=sharing). All non-episodic baselines use the same checkpoint, stored in the `standard` folder. The results (averaged over 600 episodes) obtained with the provided Resnet-18 are summarized below:
+We provide trained Resnet-18 and WRN-2810 models on the training split of ILSVRC_2012 at [checkpoints](https://drive.google.com/file/d/1Sp7OJEK9-RKnlXjz4DEdM-9BHe1j0rtP/view?usp=sharing). All non-episodic baselines use the same checkpoint, stored in the `standard` folder. The results (averaged over 600 episodes) obtained with an ImageNet pre-trained Resnet-18 are summarized below. Please take note that **results below are not intended to be used as official numbers** (they may not follow optimal hyper-parameters), but only to make sure you are able to ensure reproducibility with default options:
+
+|  Method  |aircraft|traffic_sign|quickdraw| dtd |omniglot|fungi|cu_birds|mscoco|
+|----------|--------|------------|---------|-----|--------|-----|--------|------|
+|  BDCSPN  |  48.4  |    50.93   |  56.03  |76.79|  54.97 |45.43|  73.96 | 50.75|
+| Finetune |  56.12 |    53.92   |  58.89  |79.67|  59.41 | 39.7|  73.67 | 44.85|
+|SimpleShot|  49.52 |    51.92   |  56.32  |76.62|  55.12 |44.95|  73.49 | 50.05|
+|  TIM_GD  |  55.74 |    58.72   |  61.09  |80.58|  62.25 |49.75|  76.72 | 55.54|
 
 
-|  Inductive methods     | Architecture|    ILSVRC  |    Omniglot  |   Aircraft   |    Birds   |   Textures   |  Quick Draw |   Fungi  |  VGG Flower  | Traffic Signs |    MSCOCO   |    Mean    |
+
+<!-- |  Inductive methods     | Architecture|    ILSVRC  |    Omniglot  |   Aircraft   |    Birds   |   Textures   |  Quick Draw |   Fungi  |  VGG Flower  | Traffic Signs |    MSCOCO   |    Mean    |
 |      ---      |      ---             |    ---     |       ---    |     ---      |     ---    |     ---      |    ---      |    ---   |     ---      |      ---      |     ---     |   ---      |
 |      Finetune |   Resnet-18          |    59.8    |   **60.5**   |   **63.5**   |  **80.6**  |  **80.9**    |   **61.5**  |    45.2  |   **91.1**   |    **55.1**   |     41.8    |  **64.0**  |
 |      ProtoNet |   Resnet-18          |    48.2    |     46.7     |     44.6     |    53.8    |    70.3      |     45.1    |    38.5  |     82.4     |      42.2     |     38.0    |    51.0    |
 |    SimpleShot |   Resnet-18          |  **60.0**  |     54.2     |     55.9     |    78.6    |    77.8      |     57.4    | **49.2** |     90.3     |      49.6     |   **44.2**  |    61.7    |
-
-
 |  Transductive methods  | Architecture|    ILSVRC  |    Omniglot  |   Aircraft   |    Birds   |   Textures   |  Quick Draw |   Fungi  |  VGG Flower  | Traffic Signs |    MSCOCO   |    Mean    |
 |      ---      |      ---             |    ---     |       ---    |     ---      |     ---    |     ---      |    ---      |    ---   |     ---      |      ---      |     ---     |   ---      |
 |     BD-CSPN   |   Resnet-18          |    60.5    |     54.4     |     55.2     |    80.9    |    77.9      |      57.3   |    50.0  |     91.7     |      47.8     |     43.9    |    62.0    |
 |     TIM-GD    |   Resnet-18          |  **63.6**  |   **65.6**   |   **66.4**   |  **85.6**  |  **84.7**    |    **65.8** | **57.5** |   **95.6**   |    **65.2**   |   **50.9**  |  **70.1**  |
-
+ -->
 See Sect. 1.4 and 1.5 to reproduce these results.
 
 ### 1.4 Train models from scratch (optional)
 
-In order to train you model from scratch, execute scripts/train.sh script:
+In order to train you model from scratch, execute:
 ```bash
-bash scripts/train.sh <method> <architecture> <dataset>
+make method=<method> arch=<architecture> base=<base_dataset> val=<validation_dataset> train
 ```
-`method` is to be chosen among all method specific config files in [config/](/config), `architecture` in ['resnet18', 'wideres2810'] and `dataset` among all datasets (as named by the META-DATASET converted folders). Note that the hierarchy of arguments passed to `src/train.py` and `src/eval.py` is the following: base_config < method_config < opts arguments.
+`method` is to be chosen among all method specific config files in [config/method](/config/method), `architecture` in [/src/models/standard](/src/models) and `dataset` among all datasets (as named by the META-DATASET converted folders). Note that the hierarchy of arguments passed to `src/train.py` and `src/eval.py` is the following: base_config < method_config < opts arguments.
 
 **Mutiprocessing** : This code supports distributed training. To leverage this feature, set the `gpus` option accordingly (for instance `gpus: [0, 1, 2, 3]`).
 
@@ -90,7 +109,7 @@ bash scripts/train.sh <method> <architecture> <dataset>
 
 Once trained (or once pre-trained models downloaded), you can evaluate your model on the test split of each dataset by running:
 ```bash
-bash scripts/test.sh <method> <architecture> <base_dataset> <test_dataset>
+make method=<method> arch=<architecture> base=<base_dataset> test=<test_dataset> eval
 ```
 Results will be saved in `results/<method>/<exp_no>` where <exp_no> corresponds to a unique hash number of the config (you can only get the same result folder iff all hyperparameters are the same).
 
@@ -145,12 +164,24 @@ This code was designed to allow easy incorporation of new methods.
 
 ## 4. Contributions
 
-Contributions are more than welcome. In particular, if you want to add methods/pre-trained models, do make a pull-request.
+Contributions are more than welcome. In particular, if you want to add methods/pre-trained models, do make a PR.
 
 
 ## 5. Citation
 
 If you find this repo useful for your research, please consider citing the following papers:
+
+```bibtex
+@article{triantafillou2019meta,
+  title={Meta-dataset: A dataset of datasets for learning to learn from few examples},
+  author={Triantafillou, Eleni and Zhu, Tyler and Dumoulin, Vincent and Lamblin, Pascal and Evci, Utku and Xu, Kelvin and Goroshin, Ross and Gelada, Carles and Swersky, Kevin and Manzagol, Pierre-Antoine and others},
+  journal=ICLR},
+  year={2020}
+}
+```
+
+
+
 ```bibtex
 @misc{boudiaf2021mutualinformation,
       title={Mutual-Information Based Few-Shot Classification}, 

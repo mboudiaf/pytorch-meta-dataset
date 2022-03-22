@@ -3,7 +3,7 @@ from typing import Dict, Optional, Tuple
 
 import torch
 from torch import Tensor
-
+from loguru import logger
 from .utils import get_one_hot, compute_centroids, extract_features
 from .method import FSmethod
 from ..metrics import Metric
@@ -53,10 +53,10 @@ class ProtoNet(FSmethod):
                 task_ids: Tuple[int, int] = None) -> Tuple[Optional[Tensor], Tensor]:
         """
         inputs:
-            support : tensor of size [s_shot, c, h, w]
-            query : tensor of size [q_shot, c, h, w]
-            y_s : tensor of size [s_shot]
-            y_q : tensor of size [q_shot]
+            support : tensor of size [n_task, s_shot, c, h, w]
+            query : tensor of size [n_task, q_shot, c, h, w]
+            y_s : tensor of size [n_task, s_shot]
+            y_q : tensor of size [n_task, q_shot]
         """
         num_classes = y_s.unique().size(0)
 

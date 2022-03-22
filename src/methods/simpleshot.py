@@ -1,6 +1,7 @@
 import time
 import argparse
 from typing import Dict, Optional, Tuple
+import torch.nn.functional as F
 
 import torch
 from torch import Tensor
@@ -96,6 +97,10 @@ class SimpleShot(FSmethod):
         with torch.no_grad():
             feat_s, feat_q = extract_features(self.extract_batch_size,
                                               support, query, model)
+
+        # Perform required normalizations
+        feat_s = F.normalize(feat_s, dim=-1)
+        feat_q = F.normalize(feat_q, dim=-1)
 
         # Initialize weights
         t0 = time.time()

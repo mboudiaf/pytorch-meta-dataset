@@ -17,9 +17,7 @@ n_episodes=600
 source=records
 mode=test
 arch=resnet18
-
-# ------ General options ------------
-
+load_from_timm=True
 method=finetune
 data=variable
 
@@ -53,7 +51,7 @@ train:
 				val_source $(val) \
 				debug $(debug) \
 				loader_version $(loader) \
-				load_from_pretrained True \
+				load_from_timm False \
 
 eval:
 	$(exec) -m src.eval  --base_config config/base.yaml \
@@ -64,16 +62,25 @@ eval:
 				 val_source ${val} \
 				 test_source ${test} \
 				 val_episodes $(n_episodes) \
+				 eval_mode $(mode) \
 				 visu ${visu} \
 				 val_batch_size 1 \
-				 load_from_pretrained True ;\
+				 load_from_timm $(load_from_timm) ;\
 
 # ============= Pre-made recipes ===================
 
-test_all:
-	for source in omniglot aircraft cu_birds dtd quickdraw fungi traffic_sign mscoco; do \
-	    make eval test=$${source} ;\
+benchmark:
+	for method in simpleshot bd_cspn tim_gd finetune; do \
+		for source in omniglot aircraft cu_birds dtd quickdraw fungi traffic_sign mscoco; do \
+		    make method=$${method} test=$${source} eval;\
+		done ;\
 	done ;\
+
+
+# ============= Plotting =============
+
+train_plot:
+	python -m src.plot --folder checkpoints/base=${base}/val=${val}/arch=${arch}
 
 # ============= Communication with server =============
 
@@ -117,11 +124,12 @@ tar_and_deploy_data:
 # ============= Prepare data =============
 
 ilsvrc_2012:
-	# AssumeS you already have downloaded the file
+	# Assumes you already have downloaded the ILSVRC2012_img_train.tar file
 	mkdir ${DATASRC}/ILSVRC2012_img_train ;\
 	tar -xvf /ssd/download/ILSVRC2012_img_train.tar -C ${DATASRC}/ILSVRC2012_img_train ;\
 	# Execute the following in the directory ${DATASRC}/ILSVRC2012_img_train
 # 	find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
+	# Finally, execute what follows
 	$(exec) -m src.datasets.conversion.convert_datasets_to_records \
 	  --dataset=ilsvrc_2012 \
 	  --ilsvrc_2012_data_root=${DATASRC}/ILSVRC2012_img_train \

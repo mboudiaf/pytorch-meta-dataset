@@ -17,8 +17,8 @@ TRAINING:
 
 OPTIM:
     gamma: 0.885
-    lr: 0.00025
-    lr_stepsize: 500
+    lr: 0.0003
+    lr_stepsize: 5000
     weight_decay: 0.0001
     optimizer_name: 'Adam'
     scheduler: 'step'

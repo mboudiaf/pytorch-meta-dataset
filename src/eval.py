@@ -107,7 +107,7 @@ def main_worker(rank: int,
         model = DDP(model, device_ids=[rank])
 
     logger.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
-    if not args.load_from_pretrained:
+    if not args.load_from_timm:  # then we load the model from a local checkpoint obtained through training
         model_path = get_model_dir(args=args)
         load_checkpoint(model=model, model_path=model_path)
     model.eval()

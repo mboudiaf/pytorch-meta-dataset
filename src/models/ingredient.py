@@ -12,4 +12,4 @@ def get_model(args: argparse.Namespace,
     else:
         logger.info(f"Standard {args.arch} loaded")
         return standard_dict[args.arch](num_classes=num_classes,
-                                        pretrained=args.load_from_pretrained)
+                                        pretrained=args.load_from_timm)

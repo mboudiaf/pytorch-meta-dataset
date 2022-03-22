@@ -136,8 +136,8 @@ class TIM_GD(TIM):
         y_s_one_hot = get_one_hot(y_s, num_classes)
 
         # Perform required normalizations
-        feat_s = F.normalize(feat_s, dim=2)
-        feat_q = F.normalize(feat_q, dim=2)
+        feat_s = F.normalize(feat_s, dim=-1)
+        feat_q = F.normalize(feat_q, dim=-1)
 
         # Initialize weights
         t0 = time.time()
@@ -270,8 +270,8 @@ class TIM_ADM(TIM):
         y_s_one_hot = get_one_hot(y_s, num_classes)
 
         # Perform required normalizations
-        feat_s = F.normalize(feat_s, dim=2)
-        feat_q = F.normalize(feat_q, dim=2)
+        feat_s = F.normalize(feat_s, dim=-1)
+        feat_q = F.normalize(feat_q, dim=-1)
 
         # Initialize weights
         t0 = time.time()
