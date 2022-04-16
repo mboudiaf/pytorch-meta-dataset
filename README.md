@@ -57,12 +57,12 @@ pip install -r requirements.txt
 
 ### 1.2 Data
 
-To download the META-DATASET, please follow the details instructions provided at [meta-dataset](https://github.com/google-research/meta-dataset) to obtain the `.tfrecords` converted data. Once done, make sure all converted dataset are in a single folder, and execute the following script to produce index files:
+To download the META-DATASET, please follow the details instructions provided at [meta-dataset](https://github.com/google-research/meta-dataset) to obtain the `.tfrecords` converted data. Once done, make sure all converted dataset are in a single folder, and execute the following to produce index files:
 
 ```bash
-bash scripts/make_records/make_index_files.sh <path_to_converted_data>
+make index_files
 ```
-This may take a few minutes. Once all this is done, set the `path` variable in [`config/base.yaml`](config/base.yaml#L37) to your data folder.
+This may take a few minutes.
 
 ### 1.3 Exports
 

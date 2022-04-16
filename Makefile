@@ -230,8 +230,8 @@ tiered:
 	 --records_root=${RECORDS} \
 
 
-indexes:
-	for source in ilsvrc_2012_v2; do \
+index_files:
+	for source in omniglot aircraft cu_birds dtd quickdraw vgg_flower traffic_sign mscoco ilsvrc_2012_v2; do \
 		source_path=${RECORDS}/$${source} ;\
 		find $${source_path} -name '*.tfrecords' -type f -exec sh -c '$(exec)3 -m tfrecord.tools.tfrecord2idx $$2 $${2%.tfrecords}.index' sh $${source_path} {} \; ;\
 	done ;\
